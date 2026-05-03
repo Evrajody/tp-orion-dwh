@@ -36,10 +36,11 @@
 ## 2. Topologie
 
 ```
-                          ┌──────────────┐
-                          │   Adminer    │  ← UI http://localhost:8080
-                          │ (3 cibles)   │     (Postgres OLTP/DWH + SQL Server)
-                          └──┬────────┬──┘
+       Adminer × 3 instances dédiées (accès isolés)
+       ┌─────────────────┐ ┌─────────────────┐ ┌──────────────────┐
+       │ adminer-oltp    │ │ adminer-dwh     │ │ adminer-mssql    │
+       │ http://...:8080 │ │ http://...:8081 │ │ http://...:8082  │
+       └────────┬────────┘ └────────┬────────┘ └─────────┬────────┘
                              │        │
               ┌──────────────▼─┐    ┌─▼─────────────┐
    data-gen → │  postgres-oltp │    │ postgres-dwh  │
@@ -90,20 +91,24 @@ docker compose logs -f mssql-etl        # init T-SQL
 
 Accès :
 
-| Service           | URL / Port            | Identifiants                              |
-|-------------------|-----------------------|-------------------------------------------|
-| **Adminer (UI)**  | http://localhost:8080 | cf. table de connexions ci-dessous        |
-| Postgres OLTP     | localhost:5433        | orion / orion_pwd / orion_oltp            |
-| Postgres DWH      | localhost:5434        | dwh / dwh_pwd / orion_dwh                 |
-| SQL Server ETL    | localhost:1433        | sa / Orion!StrongPwd2026 / OrionETL       |
+**Trois instances Adminer dédiées** (une par base, accès indépendants) :
 
-**Connexions Adminer** (sélectionner la cible dans la liste « Cible Orion ») :
+| Instance         | URL                   | Driver | Serveur réseau | Utilisateur | Mot de passe        | Base       |
+|------------------|-----------------------|--------|----------------|-------------|---------------------|------------|
+| **adminer-oltp** | http://localhost:8080 | pgsql  | postgres-oltp  | orion       | orion_pwd           | orion_oltp |
+| **adminer-dwh**  | http://localhost:8081 | pgsql  | postgres-dwh   | dwh         | dwh_pwd             | orion_dwh  |
+| **adminer-mssql**| http://localhost:8082 | mssql  | mssql-etl      | sa          | Orion!StrongPwd2026 | OrionETL   |
 
-| Cible Orion          | Driver  | Serveur (réseau Docker) | Utilisateur | Mot de passe         | Base par défaut |
-|----------------------|---------|-------------------------|-------------|----------------------|-----------------|
-| Orion OLTP           | pgsql   | postgres-oltp           | orion       | orion_pwd            | orion_oltp      |
-| Orion DWH            | pgsql   | postgres-dwh            | dwh         | dwh_pwd              | orion_dwh       |
-| OrionETL (SQL Server)| mssql   | mssql-etl               | sa          | Orion!StrongPwd2026  | OrionETL        |
+Le serveur et le driver sont **pré-remplis** par instance (`ADMINER_DEFAULT_SERVER`,
+`ADMINER_DEFAULT_DRIVER`) — il suffit d'entrer les identifiants.
+
+**Accès direct aux bases** (sans Adminer) :
+
+| Base              | Port hôte       | Identifiants                              |
+|-------------------|-----------------|-------------------------------------------|
+| Postgres OLTP     | localhost:5433  | orion / orion_pwd / orion_oltp            |
+| Postgres DWH      | localhost:5434  | dwh / dwh_pwd / orion_dwh                 |
+| SQL Server ETL    | localhost:1433  | sa / Orion!StrongPwd2026 / OrionETL       |
 
 Tous les paramètres (volumes générés, cadence ETL, dates, mots de passe) sont
 dans `.env`.
@@ -115,7 +120,7 @@ docker compose exec postgres-dwh \
     psql -U dwh -d orion_dwh -f /dev/stdin < analytics/queries.sql
 ```
 
-Ou via Adminer → choisir « Orion DWH » dans la liste → SQL command → coller un bloc.
+Ou via Adminer DWH (http://localhost:8081) → SQL command → coller un bloc.
 
 ## 5. Inspecter le moteur ETL T-SQL
 

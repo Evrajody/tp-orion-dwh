@@ -127,24 +127,49 @@ services:
     networks: [orion-net]
 
   # ---------------------------------------------------------------------------
-  # Adminer : UI web unique pour Postgres OLTP, Postgres DWH et SQL Server
-  # → http://localhost:${ADMINER_PORT}
-  # → 3 cibles pré-configurées via adminer/index.php (login-servers).
+  # Adminer × 3 : une instance par base, ports distincts.
+  #   - adminer-oltp  : http://localhost:${ADMINER_OLTP_PORT}  → Postgres OLTP
+  #   - adminer-dwh   : http://localhost:${ADMINER_DWH_PORT}   → Postgres DWH
+  #   - adminer-mssql : http://localhost:${ADMINER_MSSQL_PORT} → SQL Server ETL
   # ---------------------------------------------------------------------------
-  adminer:
+  adminer-oltp:
     image: adminer:5
-    container_name: orion-adminer
+    container_name: orion-adminer-oltp
     environment:
       ADMINER_DESIGN: ${ADMINER_DESIGN}
       ADMINER_DEFAULT_DRIVER: pgsql
       ADMINER_DEFAULT_SERVER: postgres-oltp
     ports:
-      - "${ADMINER_PORT}:8080"
-    volumes:
-      - ./adminer/index.php:/var/www/html/index.php:ro
+      - "${ADMINER_OLTP_PORT}:8080"
     depends_on:
       - postgres-oltp
+    networks: [orion-net]
+    restart: unless-stopped
+
+  adminer-dwh:
+    image: adminer:5
+    container_name: orion-adminer-dwh
+    environment:
+      ADMINER_DESIGN: ${ADMINER_DESIGN}
+      ADMINER_DEFAULT_DRIVER: pgsql
+      ADMINER_DEFAULT_SERVER: postgres-dwh
+    ports:
+      - "${ADMINER_DWH_PORT}:8080"
+    depends_on:
       - postgres-dwh
+    networks: [orion-net]
+    restart: unless-stopped
+
+  adminer-mssql:
+    image: adminer:5
+    container_name: orion-adminer-mssql
+    environment:
+      ADMINER_DESIGN: ${ADMINER_DESIGN}
+      ADMINER_DEFAULT_DRIVER: mssql
+      ADMINER_DEFAULT_SERVER: mssql-etl
+    ports:
+      - "${ADMINER_MSSQL_PORT}:8080"
+    depends_on:
       - mssql-etl
     networks: [orion-net]
     restart: unless-stopped

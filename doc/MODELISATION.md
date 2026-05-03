@@ -306,9 +306,10 @@ variante a été écartée pour le TP car :
 - `mssql-etl`     : SQL Server 2022 hébergeant les procédures T-SQL (port 1433).
 - `orchestrator`  : conteneur Python long-running avec APScheduler.
 - `data-gen`      : conteneur one-shot Python qui peuple l'OLTP via Faker.
-- `adminer`      : UI web unique (Adminer 5) pour Postgres OLTP, Postgres
-  DWH **et** SQL Server (port 8080). Trois cibles pré-configurées dans
-  `adminer/index.php`.
+- `adminer-oltp`, `adminer-dwh`, `adminer-mssql` : trois instances Adminer 5
+  **dédiées et isolées**, une par base. Ports respectifs 8080, 8081, 8082 ;
+  serveur et driver pré-remplis via `ADMINER_DEFAULT_SERVER` /
+  `ADMINER_DEFAULT_DRIVER`.
 
 Le réseau Docker `orion-net` isole les communications inter-services. Trois
 volumes persistent les données : `oltp_data`, `dwh_data`, `mssql_data`

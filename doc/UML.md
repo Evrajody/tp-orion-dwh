@@ -216,12 +216,12 @@ Cinq composants déployables :
 |-------------|------------|-----------------------------------------------------|
 | `data-gen`  | component  | Peuplement Faker → OLTP (one-shot, `--profile seed`)|
 | `etl`       | component  | Jobs Python + APScheduler ; long-running           |
-| `Adminer`   | component (UI) | UI web multi-SGBD : Postgres OLTP/DWH **et** SQL Server |
+| `adminer-oltp/-dwh/-mssql` | component (UI) | Trois instances Adminer dédiées (ports 8080/8081/8082) |
 | `orion_oltp`| database   | Source `ops.*` — interface SQL/JDBC                 |
 | `orion_dwh` | database   | Cible `dw.*` — interface SQL/JDBC                   |
 
 Les **interfaces fournies/requises** sont matérialisées : SQL/JDBC sur
-`ops.*`, SQL/JDBC sur `dw.*`, TDS sur `OrionETL`, HTTP :8080 pour Adminer. La configuration
+`ops.*`, SQL/JDBC sur `dw.*`, TDS sur `OrionETL`, HTTP :8080/:8081/:8082 pour les trois instances Adminer. La configuration
 partagée (`.env`) est représentée comme une dépendance externe consommée par
 les trois composants Python.
 
@@ -234,12 +234,12 @@ Topologie physique :
 - **1 hôte Linux** (poste étudiant)
 - **1 environnement d'exécution** Docker Engine
 - **1 réseau interne** `orion-net` isolant les conteneurs
-- **5 conteneurs** (`postgres-oltp`, `postgres-dwh`, `mssql-etl`,
-  `orchestrator`, `data-gen`, `adminer`)
+- **7 conteneurs** (`postgres-oltp`, `postgres-dwh`, `mssql-etl`,
+  `orchestrator`, `data-gen`, `adminer-oltp`, `adminer-dwh`, `adminer-mssql`)
 - **3 volumes persistants** (`oltp_data`, `dwh_data`, `mssql_data`)
 
-Les artefacts déployés (fichiers SQL d'init, scripts Python/T-SQL,
-`adminer/index.php`) sont attachés à chaque conteneur via dépendance
+Les artefacts déployés (fichiers SQL d'init, scripts Python/T-SQL) sont
+attachés à chaque conteneur via dépendance
 `«deploy»`. Les ports exposés à l'hôte (`5433`, `5434`, `8080`) sont les
 points d'entrée externes.
 
