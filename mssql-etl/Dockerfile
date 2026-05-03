@@ -20,7 +20,11 @@ RUN apt-get update && \
 COPY scripts/init-db.sh    /usr/src/mssql-etl/init-db.sh
 COPY scripts/entrypoint.sh /usr/src/mssql-etl/entrypoint.sh
 COPY init                  /usr/src/mssql-etl/init
-RUN chmod +x /usr/src/mssql-etl/*.sh
+
+# Garde-fou : si les fichiers ont été copiés depuis un poste Windows
+# (CRLF), on supprime les \r qui font échouer le shebang « bash\r ».
+RUN sed -i 's/\r$//' /usr/src/mssql-etl/*.sh && \
+    chmod +x /usr/src/mssql-etl/*.sh
 
 USER mssql
 

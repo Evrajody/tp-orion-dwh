@@ -1,0 +1,28 @@
+# Force LF end-of-line for scripts et fichiers texte interprétés.
+# Empêche l'erreur « /usr/bin/env: 'bash\r': No such file or directory »
+# quand le dépôt est cloné sur Windows (autocrlf).
+
+* text=auto eol=lf
+
+*.sh   text eol=lf
+*.bash text eol=lf
+*.py   text eol=lf
+*.sql  text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.tex  text eol=lf
+*.mmd  text eol=lf
+*.md   text eol=lf
+*.php  text eol=lf
+Dockerfile     text eol=lf
+.env*          text eol=lf
+.gitignore     text eol=lf
+.gitattributes text eol=lf
+
+# Binaires
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
