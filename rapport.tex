@@ -501,9 +501,10 @@ ops.commande + ligne_commande         fact.fait_ventes (incr. + mesures)    dw.f
                                       etl.watermark, etl.run_log            (méta)
 \end{lstlisting}
 
-\screenshot{transition-pgadmin-vs-mssms.png}{Vue côte à côte : le schéma
-\code{ops} normalisé sur pgAdmin (à gauche) et la base \code{OrionETL}
-(\code{staging}, \code{dim}, \code{fact}) sur SSMS (à droite).}
+\screenshot{transition-adminer-oltp-vs-etl.png}{Vue côte à côte sur Adminer :
+le schéma \code{ops} normalisé (cible \emph{Orion OLTP}) à gauche, et la base
+\code{OrionETL} (\code{staging}, \code{dim}, \code{fact}, cible \emph{OrionETL
+SQL Server}) à droite.}
 
 \newpage
 % =============================================================================
@@ -608,16 +609,21 @@ interne \code{orion-net} :
         données entre Postgres et SQL Server ;
   \item \code{data-gen}      : conteneur Python one-shot peuplant l'OLTP via
         Faker (\code{--profile seed}) ;
-  \item \code{pgadmin}       : UI web pour explorer les deux bases Postgres.
+  \item \code{adminer}       : UI web unique (Adminer 5) pour Postgres OLTP,
+        Postgres DWH \emph{et} SQL Server. Trois cibles pré-configurées via
+        un index.php personnalisé (sélecteur \og Cible Orion \fg{}) :
+        \emph{Orion OLTP}, \emph{Orion DWH}, \emph{OrionETL}.
 \end{itemize}
 
 \begin{figure}[h]
 \centering
 \diag{06-docker-stack}
-\caption{Stack Docker : Postgres OLTP, SQL Server hébergeant la logique ETL, Postgres DWH, orchestrateur Python qui relie les trois, plus pgAdmin et data-gen.}
+\caption{Stack Docker : Postgres OLTP, SQL Server hébergeant la logique ETL, Postgres DWH, orchestrateur Python qui relie les trois, plus Adminer (UI multi-SGBD) et data-gen.}
 \end{figure}
 
-\screenshot{docker-compose-ps.png}{Sortie de \texttt{docker compose ps} : les six services à l'état \emph{Up (healthy)}.}
+\screenshot{docker-compose-ps.png}{Sortie de \texttt{docker compose ps} : les cinq services à l'état \emph{Up (healthy)}, plus \texttt{data-gen} qui ne tourne que sous \texttt{--profile seed}.}
+
+\screenshot{adminer-login.png}{Adminer --- écran de connexion : sélection de la cible (\emph{Orion OLTP / Orion DWH / OrionETL}) puis identifiants. Un seul outil pour les trois SGBD.}
 
 \subsection{docker-compose.yml (extrait)}
 
@@ -663,7 +669,27 @@ services:
   data-gen:
     build: ./data-gen
     profiles: ["seed"]             # ne tourne que sur demande explicite
+
+  adminer:                         # UI web multi-SGBD (pgsql + mssql)
+    image: adminer:5
+    environment:
+      ADMINER_DESIGN: ${ADMINER_DESIGN}
+      ADMINER_DEFAULT_DRIVER: pgsql
+      ADMINER_DEFAULT_SERVER: postgres-oltp
+    ports: ["${ADMINER_PORT}:8080"]
+    volumes:
+      - ./adminer/index.php:/var/www/html/index.php:ro
 \end{lstlisting}
+
+\paragraph{Adminer en lieu et place de pgAdmin.}
+Adminer présente trois avantages dans ce TP :
+\begin{itemize}
+  \item un \textbf{seul outil} pour les trois SGBD (Postgres OLTP, Postgres
+        DWH, SQL Server \code{OrionETL}), au lieu d'alterner pgAdmin + SSMS ;
+  \item \textbf{sans état} (aucun volume), démarrage en quelques secondes ;
+  \item un \texttt{adminer/index.php} personnalisé pré-remplit la liste des
+        cibles (\emph{Orion OLTP}, \emph{Orion DWH}, \emph{OrionETL}) au login.
+\end{itemize}
 
 \paragraph{Healthchecks.} L'\code{orchestrator} ne démarre que lorsque
 les trois bases passent leur \code{healthcheck} (\code{pg\_isready} pour
@@ -673,8 +699,9 @@ utilise un \code{profile} pour ne pas se lancer automatiquement
 (\code{docker compose --profile seed run --rm data-gen}).
 
 \paragraph{Volumes nommés.} \code{oltp\_data}, \code{dwh\_data},
-\code{mssql\_data}, \code{pgadmin\_data} : la persistance survit à
-\code{docker compose down} mais peut être effacée par \code{down -v}.
+\code{mssql\_data} : la persistance survit à \code{docker compose down}
+mais peut être effacée par \code{down -v}. \emph{Adminer est sans état},
+aucun volume n'est nécessaire.
 
 \subsection{Configuration et démarrage}
 
@@ -683,7 +710,7 @@ qui contient les volumétries, les ports, les credentials SQL Server et les
 paramètres cron de l'ETL.
 
 \begin{lstlisting}[style=base,caption={Démarrage de la stack},label={lst:start}]
-# 1) Bases + SQL Server + orchestrator + pgAdmin
+# 1) Bases + SQL Server + orchestrator + Adminer
 docker compose up -d --build
 
 # 2) Peuplement OLTP (one-shot)
@@ -1224,7 +1251,6 @@ tp1-orion/
 |-- doc/
 |   |-- MODELISATION.md            (modele OP + transition + DW)
 |   |-- UML.md                     (11 diagrammes UML)
-|   |-- pgadmin-servers.json       (auto-config pgAdmin)
 |   `-- rapport/                   (ce document LaTeX)
 |       |-- rapport.tex            (rapport principal A4)
 |       |-- rapport.pdf
@@ -1254,13 +1280,15 @@ tp1-orion/
 |       |-- 02_meta_tables.sql     (etl.run_log, etl.watermark, helpers)
 |       |-- 03_staging.sql         (staging.* miroir denormalise OLTP)
 |       |-- 04_dim_tables.sql      (dim.* + fact.* gold)
-|       |-- 05_sp_dim_simple.sql   (sp_load_dim_date/channel/geo/...)
-|       |-- 06_sp_dim_scd2.sql     (sp_load_dim_customer/employee SCD2)
-|       `-- 07_sp_fact.sql         (sp_load_fact_sales + sp_run_pipeline)
+|       |-- 05_sp_dim_simple.sql   (sp_load_dim_date/canal/geo/...)
+|       |-- 06_sp_dim_scd2.sql     (sp_load_dim_client/employe SCD2)
+|       `-- 07_sp_fact.sql         (sp_load_fait_ventes + sp_run_pipeline)
 |-- orchestrator/                  ** transport Postgres <-> SQL Server **
 |   |-- Dockerfile                 (python:3.12 + msodbcsql18)
 |   |-- requirements.txt
 |   `-- orchestrate.py             (extract / EXEC / push, APScheduler)
+|-- adminer/                       ** UI web multi-SGBD **
+|   `-- index.php                  (3 cibles pre-configurees)
 `-- analytics/
     `-- queries.sql                (15 requetes repondant aux questions)
 \end{lstlisting}
@@ -1300,7 +1328,7 @@ docker compose exec postgres-dwh psql -U dwh -d orion_dwh \
 docker compose down -v
 \end{lstlisting}
 
-\screenshot{pgadmin-dwh-fact.png}{pgAdmin --- aperçu du DWH après chargement : ligne d'\texttt{dw.fait\_ventes} avec ses surrogate keys et mesures.}
+\screenshot{adminer-dwh-fact.png}{Adminer --- aperçu du DWH après chargement : ligne d'\texttt{dw.fait\_ventes} avec ses surrogate keys et mesures (cible \emph{Orion DWH}).}
 
 \screenshot{queries-result.png}{Exécution d'une requête analytique (Q1 : produits qui se vendent le mieux) sur \texttt{orion\_dwh}.}
 

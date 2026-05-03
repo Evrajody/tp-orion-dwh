@@ -20,19 +20,18 @@ flowchart TB
         N3["«node : container»<br/><b>mssql-etl</b><br/>mssql/server:2022<br/>+ unixODBC + psqlodbc<br/>:1433"]:::ms
         N4["«node : container»<br/><b>orchestrator</b><br/>python:3.12 + msodbcsql18"]:::node
         N5["«node : container»<br/><b>data-gen</b><br/>python:3.12<br/>profile=seed"]:::node
-        N6["«node : container»<br/><b>pgadmin</b><br/>dpage/pgadmin4:8<br/>:8080 → :80"]:::node
+        N6["«node : container»<br/><b>adminer</b><br/>adminer:5<br/>:8080 → :8080"]:::node
 
         A1["📦 «artifact»<br/>oltp/init/*.sql"]:::art
         A2["📦 «artifact»<br/>dwh/init/*.sql"]:::art
         A3["📦 «artifact»<br/>mssql-etl/init/*.sql<br/>(7 scripts T-SQL)"]:::art
         A4["📦 «artifact»<br/>orchestrator/orchestrate.py"]:::art
         A5["📦 «artifact»<br/>data-gen/generate.py"]:::art
-        A6["📦 «artifact»<br/>pgadmin-servers.json"]:::art
+        A6["📦 «artifact»<br/>adminer/index.php<br/>(plugin login-servers)"]:::art
 
         V1[("💾 «volume»<br/>oltp_data")]:::vol
         V2[("💾 «volume»<br/>dwh_data")]:::vol
         V3[("💾 «volume»<br/>mssql_data")]:::vol
-        V4[("💾 «volume»<br/>pgadmin_data")]:::vol
 
         A1 -.-> N1
         A2 -.-> N2
@@ -44,7 +43,6 @@ flowchart TB
         N1 -.-> V1
         N2 -.-> V2
         N3 -.-> V3
-        N6 -.-> V4
       end
     end
 
@@ -62,6 +60,7 @@ flowchart TB
     N4 -- "TDS write"--> N2
     N6 -. "TDS r/o"  .-> N1
     N6 -. "TDS r/o"  .-> N2
+    N6 -. "TDS r/o"  .-> N3
 
     class NET net
     class DOCKER net

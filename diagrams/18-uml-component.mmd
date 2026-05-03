@@ -9,7 +9,7 @@ flowchart LR
     %% Composants applicatifs
     DG["«component»<br/><b>data-gen</b><br/>Python · Faker"]:::comp
     ORC["«component»<br/><b>orchestrator</b><br/>Python · psycopg · pyodbc<br/>APScheduler"]:::comp
-    PGA["«component»<br/><b>pgAdmin</b><br/>UI"]:::ui
+    PGA["«component»<br/><b>Adminer</b><br/>UI multi-SGBD<br/>(pgsql + mssql)"]:::ui
 
     %% Bases
     OLTP[("«database»<br/><b>orion_oltp</b><br/>Postgres · ops.*")]:::pg
@@ -34,6 +34,7 @@ flowchart LR
     ORC -. "uses (write)"          .-> I2
     PGA -. "uses (read/admin)"     .-> I1
     PGA -. "uses (read/admin)"     .-> I2
+    PGA -. "uses (read/admin)"     .-> I3
 
     %% Configuration partagée
     subgraph CFG ["Configuration"]

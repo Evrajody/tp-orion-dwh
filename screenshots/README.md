@@ -7,15 +7,16 @@ n'est jamais cassée par une absence.
 
 | Fichier                            | Section / contexte                                                        |
 |------------------------------------|---------------------------------------------------------------------------|
-| `transition-pgadmin-vs-mssms.png`  | §3 Transition OLTP→DWH — vue côte à côte schéma `ops` (pgAdmin) vs `OrionETL` (SSMS) |
-| `docker-compose-ps.png`            | §5 Docker — sortie de `docker compose ps` (six services Up/healthy)       |
-| `docker-startup.png`               | §5 Docker — `docker compose up -d --build` puis `logs -f orchestrator`    |
-| `ssms-objects.png`                 | §7 ETL — arborescence `OrionETL` (staging / etl / dim / fact) dans SSMS   |
-| `ssms-sp-execute.png`              | §7 ETL — exécution manuelle d'`etl.sp_run_pipeline` (sortie + durée)      |
-| `orchestrator-logs.png`            | §7 ETL — logs Docker de l'orchestrateur sur un run complet                 |
-| `ssms-run-log.png`                 | §7 ETL — `SELECT * FROM etl.run_log` montrant les derniers runs           |
-| `pgadmin-dwh-fact.png`             | Annexe B — aperçu d'une ligne de `dw.fact_sales` dans pgAdmin             |
-| `queries-result.png`               | Annexe B — résultat d'une requête analytique (Q1 par exemple)             |
+| `transition-adminer-oltp-vs-etl.png` | §3 Transition OLTP→DWH — vue côte à côte schéma `ops` vs `OrionETL` dans Adminer |
+| `docker-compose-ps.png`              | §5 Docker — sortie de `docker compose ps` (5 services Up/healthy)                 |
+| `docker-startup.png`                 | §5 Docker — `docker compose up -d --build` puis `logs -f orchestrator`            |
+| `adminer-login.png`                  | §5 Docker — écran de connexion Adminer avec sélecteur de cible                    |
+| `ssms-objects.png` (ou `adminer-orionetl.png`) | §7 ETL — arborescence `OrionETL` (staging / etl / dim / fact) |
+| `ssms-sp-execute.png`                | §7 ETL — exécution manuelle d'`etl.sp_run_pipeline` (sortie + durée)              |
+| `orchestrator-logs.png`              | §7 ETL — logs Docker de l'orchestrateur sur un run complet                        |
+| `ssms-run-log.png`                   | §7 ETL — `SELECT * FROM etl.run_log` montrant les derniers runs                   |
+| `adminer-dwh-fact.png`               | Annexe B — aperçu d'une ligne de `dw.fait_ventes` dans Adminer (cible Orion DWH)  |
+| `queries-result.png`                 | Annexe B — résultat d'une requête analytique (Q1 par exemple)                     |
 
 Pour ajouter une capture :
 
