@@ -195,5 +195,5 @@ BEGIN
 END
 GO
 
-PRINT '[05] Procédures dimensions SCD1 (FR) prêtes.';
+PRINT '[05] Procedures dim SCD1 OK.';
 GO

@@ -107,5 +107,5 @@ BEGIN
 END
 GO
 
-PRINT '[07] sp_load_fait_ventes + sp_run_pipeline (FR) prêtes.';
+PRINT '[07] sp_load_fait_ventes + sp_run_pipeline OK.';
 GO

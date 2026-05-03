@@ -5,11 +5,11 @@ SET NOCOUNT ON;
 
 IF DB_ID(N'OrionETL') IS NULL
 BEGIN
-    PRINT '[01] Création de la base OrionETL';
+    PRINT '[01] Creation OrionETL';
     CREATE DATABASE OrionETL;
 END
 ELSE
-    PRINT '[01] Base OrionETL déjà présente';
+    PRINT '[01] OrionETL deja presente';
 GO
 
 USE OrionETL;
@@ -21,5 +21,5 @@ IF SCHEMA_ID(N'dim')     IS NULL EXEC('CREATE SCHEMA dim');
 IF SCHEMA_ID(N'fact')    IS NULL EXEC('CREATE SCHEMA fact');
 GO
 
-PRINT '[01] Schémas staging, etl, dim, fact prêts.';
+PRINT '[01] Schemas staging/etl/dim/fact OK.';
 GO

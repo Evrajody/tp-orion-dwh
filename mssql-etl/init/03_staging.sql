@@ -103,5 +103,5 @@ CREATE TABLE staging.lignes_commande (
 );
 GO
 
-PRINT '[03] Tables de staging (FR) créées.';
+PRINT '[03] Tables de staging OK.';
 GO

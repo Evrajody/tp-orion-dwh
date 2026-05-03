@@ -62,5 +62,5 @@ BEGIN
 END
 GO
 
-PRINT '[02] etl.run_log + etl.watermark + helpers prêts.';
+PRINT '[02] run_log + watermark + helpers OK.';
 GO

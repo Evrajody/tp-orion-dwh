@@ -228,5 +228,5 @@ BEGIN
 END
 GO
 
-PRINT '[06] Procédures SCD2 dim_client + dim_employe (FR) prêtes.';
+PRINT '[06] Procedures SCD2 OK.';
 GO

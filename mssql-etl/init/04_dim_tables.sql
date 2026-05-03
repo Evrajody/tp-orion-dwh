@@ -142,5 +142,5 @@ CREATE TABLE fact.fait_ventes (
 );
 GO
 
-PRINT '[04] Tables dim.* + fact.fait_ventes (FR) créées.';
+PRINT '[04] Tables dim.* + fact.fait_ventes OK.';
 GO
