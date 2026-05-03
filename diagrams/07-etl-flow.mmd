@@ -1,0 +1,42 @@
+%%{init: {"theme":"neutral","flowchart":{"curve":"basis","htmlLabels":true}}}%%
+flowchart LR
+    classDef src    fill:#FFE7CE,stroke:#C8702A,color:#5C3A0F,font-weight:bold
+    classDef stg    fill:#FFFBE5,stroke:#B58900,color:#5C3A0F
+    classDef trf    fill:#CCE5FF,stroke:#1F4E79,color:#1F2A44,font-weight:bold
+    classDef tgt    fill:#E8F0E8,stroke:#1F4E79,color:#1F4E79,font-weight:bold
+    classDef proc   fill:#FFF,stroke:#1F4E79,color:#1F4E79
+
+    subgraph SRC ["1️⃣ SOURCE — Postgres OLTP (ops.*)"]
+      S1["client · employe · produit<br/>fournisseur · commande + ligne_commande<br/>geo · org_rh"]:::src
+    end
+
+    subgraph STG ["2️⃣ STAGING — SQL Server (OrionETL.staging.*)"]
+      ST1["geographie_full · fournisseur_full<br/>produit_full · client_full<br/>employe_full · canal · lignes_commande"]:::stg
+    end
+
+    subgraph TRF ["3️⃣ TRANSFORM — T-SQL (OrionETL.etl.*)"]
+      direction TB
+      P1["sp_load_dim_date"]:::proc
+      P2["sp_load_dim_canal<br/>sp_load_dim_geographie<br/>sp_load_dim_fournisseur<br/>sp_load_dim_produit<br/>(SCD1 — full reload)"]:::proc
+      P3["sp_load_dim_client<br/>sp_load_dim_employe<br/>(SCD2 — hash_ligne + merge)"]:::proc
+      P4["sp_load_fait_ventes<br/>(incrémental + mesures)"]:::proc
+      META["etl.run_log<br/>etl.watermark"]:::proc
+    end
+
+    subgraph TGT ["4️⃣ TARGET — Postgres DWH (dw.*)"]
+      T1["dim_date · dim_canal<br/>dim_geographie · dim_fournisseur<br/>dim_produit · dim_client<br/>dim_employe"]:::tgt
+      T2["fait_ventes"]:::tgt
+    end
+
+    ORC["⚙ orchestrator<br/>Python · APScheduler"]:::trf
+
+    SRC -- "SELECT (extract)"     --> ORC
+    ORC -- "INSERT staging"       --> STG
+    ORC -- "EXEC sp_run_pipeline" --> TRF
+    P1 --> P2 --> P3 --> P4
+    P4 -. log .-> META
+    P3 -. log .-> META
+    P2 -. log .-> META
+    TRF -- "SELECT dim/fact"      --> ORC
+    ORC -- "COPY → DWH"           --> T1
+    ORC -- "COPY → DWH"           --> T2

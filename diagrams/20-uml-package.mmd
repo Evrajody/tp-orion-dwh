@@ -1,0 +1,72 @@
+%%{init: {
+  "theme":"base",
+  "themeVariables":{
+    "fontFamily":"Helvetica, Arial, sans-serif",
+    "primaryColor":"#FFF8DC",
+    "primaryBorderColor":"#444444",
+    "primaryTextColor":"#1F2A44",
+    "lineColor":"#1F4E79"
+  },
+  "flowchart":{"curve":"basis","htmlLabels":true,"nodeSpacing":35,"rankSpacing":45}
+}}%%
+flowchart TB
+    classDef pkg     fill:#FFF8DC,stroke:#444,stroke-width:1.2px,color:#1F2A44,font-weight:bold
+    classDef pkgFact fill:#FFE7CE,stroke:#C8702A,stroke-width:1.5px,color:#5C3A0F,font-weight:bold
+    classDef pkgETL  fill:#DDEAF6,stroke:#1F4E79,stroke-width:1.2px,color:#1F2A44,font-weight:bold
+    classDef pkgApp  fill:#F5E1FF,stroke:#7A3A9C,stroke-width:1.2px,color:#3A1A5C,font-weight:bold
+
+    %% --------------------------- OPS (OLTP) -----------------------------
+    subgraph OPS ["📦 «schema» ops (OLTP — Postgres)"]
+      direction TB
+      P1["«package»<br/><b>geo</b><br/>continent · pays · region · ville"]:::pkg
+      P2["«package»<br/><b>org_rh</b><br/>org_pays → org_groupe<br/>employe · contrat_employe"]:::pkg
+      P3["«package»<br/><b>produits</b><br/>ligne · categorie · groupe · produit<br/>historique_prix · remise · fournisseur"]:::pkg
+      P4["«package»<br/><b>clients</b><br/>groupe_client · client<br/>carte_fidelite"]:::pkg
+      P5["«package»<br/><b>ventes</b><br/>canal_vente · commande<br/>ligne_commande"]:::pkgFact
+    end
+
+    %% --------------------------- ETL (SQL Server) -----------------------
+    subgraph ETL ["📦 «database» OrionETL (SQL Server)"]
+      direction TB
+      E1["«package»<br/><b>staging</b><br/>geographie_full · fournisseur_full<br/>produit_full · client_full<br/>employe_full · lignes_commande"]:::pkgETL
+      E2["«package»<br/><b>dim</b><br/>tables dimensionnelles<br/>(zone gold transitoire)"]:::pkgETL
+      E3["«package»<br/><b>fact</b><br/>fait_ventes"]:::pkgETL
+      E4["«package»<br/><b>etl</b><br/>sp_run_pipeline · sp_load_*<br/>run_log · watermark"]:::pkgETL
+    end
+
+    %% --------------------------- DW (DWH cible) -------------------------
+    subgraph DW ["📦 «schema» dw (DWH — Postgres, étoile)"]
+      direction TB
+      D1["«package»<br/><b>dimensions</b><br/>dim_date · dim_produit<br/>dim_client · dim_employe<br/>dim_fournisseur · dim_canal<br/>dim_geographie"]:::pkg
+      D2["«package»<br/><b>faits</b><br/>fait_ventes"]:::pkgFact
+    end
+
+    %% --------------------------- APP (containers) -----------------------
+    subgraph APP ["📦 «deployable» app"]
+      direction TB
+      T1["«package»<br/><b>data-gen</b><br/>(Faker fr_FR)"]:::pkgApp
+      T2["«package»<br/><b>orchestrator</b><br/>Postgres ⇄ SQL Server"]:::pkgApp
+      T3["«package»<br/><b>analytics</b><br/>queries.sql"]:::pkgApp
+    end
+
+    %% --------------------------- Dépendances ----------------------------
+    P2 -. "«use»" .-> P1
+    P3 -. "«use»" .-> P1
+    P4 -. "«use»" .-> P1
+    P5 -. "«use»" .-> P2
+    P5 -. "«use»" .-> P3
+    P5 -. "«use»" .-> P4
+
+    E1 -. "«use»" .-> E4
+    E2 -. "«use»" .-> E4
+    E3 -. "«use»" .-> E2
+    E3 -. "«use»" .-> E4
+
+    D2 -. "«use»" .-> D1
+
+    T1 -. "«write»" .-> OPS
+    T2 -. "«read»"  .-> OPS
+    T2 -. "«write»" .-> ETL
+    T2 -. "«read»"  .-> ETL
+    T2 -. "«write»" .-> DW
+    T3 -. "«read»"  .-> DW

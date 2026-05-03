@@ -1,0 +1,38 @@
+%%{init: {"theme":"neutral","sequence":{"actorMargin":40,"width":150,"showSequenceNumbers":true}}}%%
+sequenceDiagram
+    autonumber
+    actor Cli as Client
+    participant Web as Frontal Web<br/>(canal INTERNET)
+    participant Cmd as Service<br/>Commande
+    participant Stk as Service<br/>Stock
+    participant Prx as Service<br/>Tarification
+    participant DB as PostgreSQL<br/>OLTP (ops)
+    participant Loy as Service<br/>Fidélité
+
+    Cli->>Web: 1. Constitue son panier
+    Web->>Prx: 2. getPrix(produit_id, ajd)
+    Prx->>DB: SELECT cout, prix_vente<br/>FROM historique_prix<br/>WHERE date_debut<=ajd<br/>AND (date_fin IS NULL OR date_fin>=ajd)
+    DB-->>Prx: (cout, prix_vente)
+    Prx->>DB: SELECT pct_remise<br/>FROM remise_produit<br/>WHERE ajd BETWEEN date_debut AND date_fin
+    DB-->>Prx: pct_remise (ou 0)
+    Prx-->>Web: prix unitaire net + remise
+
+    Cli->>Web: 3. Valide la commande
+    Web->>Cmd: createCommande(client_id,<br/>employe_id, canal, lignes)
+    Cmd->>Stk: reserverStock(lignes)
+    Stk-->>Cmd: OK
+    Cmd->>DB: BEGIN<br/>INSERT commande RETURNING commande_id
+    DB-->>Cmd: commande_id
+    loop pour chaque ligne du panier
+      Cmd->>DB: INSERT ligne_commande<br/>(commande_id, numero_ligne, produit_id,<br/>quantite, prix_unitaire, cout_unitaire,<br/>pct_remise)
+    end
+    Cmd->>DB: UPDATE commande<br/>SET montant_total = SUM(...)<br/>COMMIT
+    DB-->>Cmd: ok
+
+    opt Client porteur de carte de fidélité
+      Cmd->>Loy: ajouterPoints(client_id,<br/>montant_net)
+      Loy->>DB: UPDATE carte_fidelite<br/>(historique points)
+    end
+
+    Cmd-->>Web: ConfirmationCommande(commande_id, total)
+    Web-->>Cli: 4. Récépissé + n° de commande

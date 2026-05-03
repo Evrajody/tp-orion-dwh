@@ -1,0 +1,31 @@
+%%{init: {"theme":"neutral"}}%%
+stateDiagram-v2
+    direction LR
+    [*] --> Draft : addLine() / créer panier
+
+    Draft --> Validated : validate()<br/>[stock dispo &amp;&amp; lignes &gt; 0]
+    Draft --> Cancelled : abort()
+
+    Validated --> PaymentPending : submitPayment()
+    PaymentPending --> Paid : paymentAccepted()
+    PaymentPending --> PaymentFailed : paymentDeclined()
+    PaymentFailed --> PaymentPending : retry()
+    PaymentFailed --> Cancelled : timeout()
+
+    Paid --> Preparing : pickAndPack()
+    Preparing --> Shipped : ship()
+    Shipped --> Delivered : deliveryConfirmed()
+    Delivered --> Closed : after 30 days<br/>(fenêtre retour close)
+
+    Delivered --> ReturnRequested : customerReturn()
+    ReturnRequested --> Refunded : refund()
+    Refunded --> Closed
+
+    Cancelled --> [*]
+    Closed --> [*]
+
+    note right of Paid
+      Insertion effective dans
+      commande &amp; ligne_commande
+      → consommé par fait_ventes
+    end note

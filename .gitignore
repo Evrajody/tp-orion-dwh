@@ -1,0 +1,7 @@
+build/
+*.aux
+*.log
+*.toc
+*.out
+*.synctex.gz
+puppeteer-config.json

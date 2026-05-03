@@ -1,0 +1,64 @@
+%%{init: {"theme":"neutral"}}%%
+erDiagram
+    GROUPE_CLIENT  ||--o{ CLIENT          : "classe"
+    CLIENT         ||--o| CARTE_FIDELITE  : "détient"
+    VILLE          ||--o{ CLIENT          : "héberge"
+    CLIENT         ||--o{ COMMANDE        : "passe"
+    EMPLOYE        ||--o{ COMMANDE        : "enregistre"
+    CANAL_VENTE    ||--o{ COMMANDE        : "canal"
+    COMMANDE       ||--|{ LIGNE_COMMANDE  : "contient"
+    PRODUIT        ||--o{ LIGNE_COMMANDE  : "vendu sur"
+
+    GROUPE_CLIENT {
+        serial  groupe_client_id PK
+        varchar nom_groupe_client
+    }
+    CLIENT {
+        bigserial client_id PK
+        varchar   nom
+        varchar   prenom
+        char      sexe
+        date      date_naissance
+        boolean   actif
+        int       groupe_client_id FK
+        int       ville_id FK
+    }
+    CARTE_FIDELITE {
+        bigserial carte_fidelite_id PK
+        bigint    client_id FK "1-1"
+        varchar   numero_carte
+        date      date_emission
+    }
+    CANAL_VENTE {
+        smallserial canal_id PK
+        varchar     code_canal "MAGASIN/CATALOGUE/INTERNET"
+        varchar     nom_canal
+    }
+    COMMANDE {
+        bigserial commande_id PK
+        date      date_commande
+        numeric   montant_total
+        timestamp cree_le
+        bigint    client_id FK
+        bigint    employe_id FK "commercial"
+        smallint  canal_id FK
+    }
+    LIGNE_COMMANDE {
+        bigint   commande_id PK,FK
+        smallint numero_ligne PK
+        bigint   produit_id FK
+        numeric  quantite
+        numeric  prix_unitaire
+        numeric  cout_unitaire
+        numeric  pct_remise
+    }
+    PRODUIT {
+        bigserial produit_id PK
+        varchar   nom_produit
+    }
+    EMPLOYE {
+        bigserial employe_id PK
+    }
+    VILLE {
+        serial ville_id PK
+    }

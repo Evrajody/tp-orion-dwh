@@ -1,0 +1,62 @@
+%%{init: {"theme":"neutral","flowchart":{"curve":"basis","htmlLabels":true,"nodeSpacing":40,"rankSpacing":50}}}%%
+flowchart LR
+    classDef actor    fill:#FFF,stroke:#1F4E79,stroke-width:2px,color:#1F4E79,font-weight:bold
+    classDef usecase  fill:#E8F0E8,stroke:#1F4E79,stroke-width:1px,color:#1F4E79
+    classDef system   fill:#F5F5F5,stroke:#666,stroke-dasharray:4 4,color:#333,font-weight:bold
+    classDef include  stroke:#888,color:#666
+
+    %% ---- Acteurs (humains et systèmes) ----
+    A1(["👤 Analyste<br/>décisionnel"]):::actor
+    A2(["👤 Directeur<br/>commercial"]):::actor
+    A3(["👤 Direction<br/>marketing"]):::actor
+    A4(["👤 Direction RH"]):::actor
+    A5(["👤 Data engineer<br/>(DBA)"]):::actor
+    A6(["⚙ ETL Scheduler<br/>«system»"]):::actor
+    A7(["💾 Système OLTP<br/>«external»"]):::actor
+
+    %% ---- Frontière du système décisionnel Orion ----
+    subgraph SYS ["Système décisionnel Orion"]
+      direction TB
+      UC1(["UC-01 : Analyser le top<br/>des ventes par produit"]):::usecase
+      UC2(["UC-02 : Détecter les produits<br/>en perte de vitesse"]):::usecase
+      UC3(["UC-03 : Calculer la marge<br/>par groupe de produits"]):::usecase
+      UC4(["UC-04 : Évaluer l'impact<br/>des remises sur ventes / marge"]):::usecase
+      UC5(["UC-05 : Classer les commerciaux<br/>par sexe, âge, salaire, pays"]):::usecase
+      UC6(["UC-06 : Segmenter les clients<br/>(groupes, rentabilité)"]):::usecase
+      UC7(["UC-07 : Analyser la performance<br/>des fournisseurs"]):::usecase
+      UC8(["UC-08 : Statistiques du CA<br/>(moyenne, écart-type, Test H/F)"]):::usecase
+      UC9(["UC-09 : Identifier les variables<br/>explicatives du CA"]):::usecase
+
+      UCA(["UC-10 : Charger l'entrepôt<br/>(jobs ETL planifiés)"]):::usecase
+      UCB(["UC-11 : Superviser ETL<br/>(logs, watermark, reprise)"]):::usecase
+      UCC(["UC-12 : Extraire données OLTP<br/>(incrémental)"]):::usecase
+      UCD(["UC-13 : S'authentifier"]):::usecase
+    end
+
+    %% ---- Associations acteurs / cas ----
+    A1 --> UC1
+    A1 --> UC2
+    A1 --> UC8
+    A1 --> UC9
+    A2 --> UC1
+    A2 --> UC3
+    A2 --> UC5
+    A3 --> UC4
+    A3 --> UC6
+    A4 --> UC5
+    A1 --> UC6
+    A2 --> UC7
+    A5 --> UCA
+    A5 --> UCB
+    A6 --> UCA
+    A6 --> UCC
+    A7 --> UCC
+
+    %% ---- Relations «include» / «extend» ----
+    UCA -. "«include»" .-> UCC
+    UC1 -. "«include»" .-> UCD
+    UC5 -. "«include»" .-> UCD
+    UC8 -. "«include»" .-> UCD
+    UCB -. "«extend»" .-> UCA
+
+    class SYS system

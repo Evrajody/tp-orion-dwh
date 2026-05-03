@@ -1,0 +1,186 @@
+% =============================================================================
+%  Poster A1 --- Modélisation UML complète du TP1 Orion sur UNE seule page.
+%  Compilation : tectonic uml-poster.tex
+%  Prérequis  : ./build.sh a généré build/*.pdf
+% =============================================================================
+\documentclass[12pt]{article}
+
+\usepackage[
+  paperwidth=1189mm,
+  paperheight=841mm,    % A0 paysage
+  left=14mm, right=14mm, top=12mm, bottom=12mm
+]{geometry}
+
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{textcomp}
+
+\tcbuselibrary{skins,breakable}
+
+% ----------------------------------------------------------------------------
+%  Couleurs
+% ----------------------------------------------------------------------------
+\definecolor{orionblue}{HTML}{1F4E79}
+\definecolor{orionorange}{HTML}{C8702A}
+\definecolor{orionbg}{HTML}{F5F8FB}
+\definecolor{orionrule}{HTML}{C8D6E5}
+
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\fboxsep}{0pt}
+
+% ----------------------------------------------------------------------------
+%  Boîte conteneur d'un diagramme
+%    #1 = numéro      #2 = titre court     #3 = sous-titre / rôle
+%    #4 = chemin PDF  #5 = hauteur (en \textheight ou cm)
+% ----------------------------------------------------------------------------
+\newtcolorbox{umlbox}[3]{%
+  enhanced,
+  colback=white,
+  colframe=orionblue,
+  boxrule=0.6pt,
+  arc=3pt,
+  left=6pt, right=6pt, top=42pt, bottom=6pt,
+  title={\textbf{\large \##1\ \ #2}\\[-1pt]\normalsize\textcolor{orionorange}{#3}},
+  fonttitle=\color{white},
+  coltitle=white,
+  attach boxed title to top left={xshift=6pt,yshift=-4pt},
+  boxed title style={colback=orionblue,boxrule=0pt,arc=3pt,
+                     left=6pt,right=6pt,top=3pt,bottom=3pt},
+  drop shadow={black!25!white},
+}
+
+% Macro raccourcie : insère un diagramme avec son cadre.
+%   #1 numéro  #2 titre  #3 sous-titre  #4 fichier (sans ext.)  #5 hauteur
+\newcommand{\umldiag}[5]{%
+  \begin{umlbox}{#1}{#2}{#3}
+    \centering
+    \includegraphics[height=#5,keepaspectratio,
+                     max width=\linewidth]{build/#4}
+  \end{umlbox}%
+}
+
+% pour pouvoir limiter la largeur dans \includegraphics :
+\usepackage[export]{adjustbox}
+
+\begin{document}
+
+% =============================================================================
+%  Bandeau supérieur
+% =============================================================================
+\noindent
+\begin{tcolorbox}[
+  enhanced,
+  colback=orionblue,
+  colframe=orionblue,
+  boxrule=0pt,
+  arc=3pt,
+  left=14pt,right=14pt,top=8pt,bottom=8pt,
+  width=\textwidth,
+]
+{\color{white}\Huge\bfseries TP1 --- Société Orion \hfill Modélisation UML complète}\\[1.5mm]
+{\color{orionbg}\large
+  11 diagrammes UML 2.x sur une page A0 : cas d'utilisation, classes, séquence, activité,
+  états, composants, déploiement, packages ---
+  source : Mermaid \texttt{doc/rapport/diagrams/} ; document associé : \texttt{doc/UML.md}.}
+\end{tcolorbox}
+
+\vspace{4mm}
+
+% =============================================================================
+%  Grille principale : 4 colonnes
+%  Une colonne large à gauche pour le diagramme de classes (le plus dense)
+%  + 3 colonnes droites avec les autres diagrammes répartis.
+% =============================================================================
+
+\noindent
+\begin{minipage}[t]{0.32\textwidth}
+  % ---- COLONNE 1 : structure (UC + Classes) -------------------------------
+  \umldiag{10}{Cas d'utilisation}{Acteurs et besoins analytiques de l'énoncé}
+          {10-uml-usecase.pdf}{16cm}\par\vspace{2mm}
+  \umldiag{11}{Diagramme de classes}{Modèle métier --- héritage, compositions,
+          multiplicités, méthodes}{11-uml-class.pdf}{29cm}
+\end{minipage}\hfill
+%
+\begin{minipage}[t]{0.33\textwidth}
+  % ---- COLONNE 2 : comportement (séquence + activité) ---------------------
+  \umldiag{12}{Séquence --- passage commande}{Tarification, transaction,
+          fidélité (OLTP)}{12-uml-sequence-order.pdf}{14cm}\par\vspace{2mm}
+  \umldiag{13}{Séquence --- job ETL SCD2}{Hash, fermeture v(n), insertion v(n+1),
+          watermark}{13-uml-sequence-etl.pdf}{14cm}\par\vspace{2mm}
+  \umldiag{14}{Activité --- cycle commande}{Du panier au COMMIT avec décisions
+          stock / fidélité}{14-uml-activity-order.pdf}{16cm}
+\end{minipage}\hfill
+%
+\begin{minipage}[t]{0.32\textwidth}
+  % ---- COLONNE 3 : états + activité ETL -----------------------------------
+  \umldiag{15}{Activité --- pipeline ETL}{3 cron jobs : dim refs, SCD2,
+          fact incrémental}{15-uml-activity-etl.pdf}{20cm}\par\vspace{2mm}
+  \umldiag{16}{États --- commande}{Draft $\to$ Validated $\to$ Paid $\to$ Shipped $\to$ Closed}
+          {16-uml-state-order.pdf}{11cm}\par\vspace{2mm}
+  \umldiag{17}{États --- contrat employé}{Active courant : end\_date NULL ou
+          $\geq$ today}{17-uml-state-contract.pdf}{12cm}
+\end{minipage}
+
+\vspace{4mm}
+
+% =============================================================================
+%  Bandeau bas : architecture (composants / déploiement / packages)
+% =============================================================================
+\noindent
+\begin{minipage}[t]{0.33\textwidth}
+  \umldiag{18}{Diagramme de composants}{5 composants, interfaces SQL/HTTP,
+          configuration partagée}{18-uml-component.pdf}{12cm}
+\end{minipage}\hfill
+%
+\begin{minipage}[t]{0.33\textwidth}
+  \umldiag{19}{Diagramme de déploiement}{Hôte $\to$ Docker $\to$ réseau
+          orion-net $\to$ 5 conteneurs}{19-uml-deployment.pdf}{12cm}
+\end{minipage}\hfill
+%
+\begin{minipage}[t]{0.32\textwidth}
+  \umldiag{20}{Diagramme de packages}{Sous-domaines OLTP / DWH / app
+          et leurs dépendances «use»}{20-uml-package.pdf}{12cm}
+\end{minipage}
+
+\vspace{3mm}
+
+% =============================================================================
+%  Pied : légende
+% =============================================================================
+\noindent
+\begin{tcolorbox}[
+  enhanced,
+  colback=orionbg,
+  colframe=orionrule,
+  boxrule=0.6pt,
+  arc=3pt,
+  left=12pt,right=12pt,top=8pt,bottom=8pt,
+  width=\textwidth,
+]
+\normalsize
+\textbf{Conventions :}
+\textcolor{orionblue}{\rule{8pt}{8pt}} référentiels OLTP \textbar{}
+\textcolor{orionorange}{\rule{8pt}{8pt}} flux transactionnels / faits \textbar{}
+\texttt{«include»} dépendance obligatoire \textbar{}
+\texttt{«extend»} dépendance optionnelle \textbar{}
+$\diamond$ composition forte \textbar{}
+$\circ$ agrégation \textbar{}
+\textbf{SCD2} = Slowly Changing Dimension type 2 (historisation par
+\texttt{effective\_from / effective\_to / is\_current}).
+\hfill
+\textbf{ENEAM 2026 --- TP-ED, TP n°1 « Société Orion »}
+\end{tcolorbox}
+
+\end{document}

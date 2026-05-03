@@ -1,0 +1,55 @@
+%%{init: {"theme":"neutral"}}%%
+erDiagram
+    LIGNE_PRODUIT     ||--o{ CATEGORIE_PRODUIT  : "regroupe"
+    CATEGORIE_PRODUIT ||--o{ GROUPE_PRODUIT     : "regroupe"
+    GROUPE_PRODUIT    ||--o{ PRODUIT            : "contient"
+    FOURNISSEUR       ||--o{ PRODUIT            : "fournit"
+    PAYS              ||--o{ FOURNISSEUR       : "héberge"
+    PRODUIT           ||--o{ HISTORIQUE_PRIX    : "historise prix"
+    PRODUIT           ||--o{ REMISE_PRODUIT     : "applique remise"
+
+    LIGNE_PRODUIT {
+        serial  ligne_produit_id PK
+        varchar nom_ligne_produit
+    }
+    CATEGORIE_PRODUIT {
+        serial  categorie_produit_id PK
+        varchar nom_categorie_produit
+        int     ligne_produit_id FK
+    }
+    GROUPE_PRODUIT {
+        serial  groupe_produit_id PK
+        varchar nom_groupe_produit
+        int     categorie_produit_id FK
+    }
+    PRODUIT {
+        bigserial produit_id PK
+        varchar   nom_produit
+        boolean   actif
+        int       groupe_produit_id FK
+        int       fournisseur_id FK
+    }
+    HISTORIQUE_PRIX {
+        bigserial prix_id PK
+        bigint    produit_id FK
+        date      date_debut
+        date      date_fin "NULL = courant"
+        numeric   cout
+        numeric   prix_vente
+    }
+    REMISE_PRODUIT {
+        bigserial remise_id PK
+        bigint    produit_id FK
+        date      date_debut
+        date      date_fin
+        numeric   pct_remise
+    }
+    FOURNISSEUR {
+        serial  fournisseur_id PK
+        varchar nom_fournisseur
+        int     pays_id FK
+    }
+    PAYS {
+        serial pays_id PK
+        varchar nom_pays
+    }

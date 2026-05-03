@@ -1,0 +1,79 @@
+%%{init: {"theme":"neutral"}}%%
+erDiagram
+    CONTINENT       ||--o{ PAYS              : "contient"
+    PAYS            ||--o{ REGION            : "contient"
+    REGION          ||--o{ VILLE             : "contient"
+    VILLE           ||--o{ EMPLOYE           : "réside"
+    ORG_PAYS        ||--o{ ORG_COMPAGNIE     : "contient"
+    ORG_COMPAGNIE   ||--o{ ORG_DEPARTEMENT   : "contient"
+    ORG_DEPARTEMENT ||--o{ ORG_SECTION       : "contient"
+    ORG_SECTION     ||--o{ ORG_GROUPE        : "contient"
+    ORG_GROUPE      ||--o{ EMPLOYE           : "emploie"
+    EMPLOYE         ||--o{ EMPLOYE           : "manage"
+    EMPLOYE         ||--o{ CONTRAT_EMPLOYE   : "signe"
+
+    CONTINENT {
+        smallserial continent_id PK
+        varchar     nom_continent
+    }
+    PAYS {
+        serial   pays_id PK
+        char     code_pays
+        varchar  nom_pays
+        smallint continent_id FK
+    }
+    REGION {
+        serial  region_id PK
+        varchar nom_region
+        int     pays_id FK
+    }
+    VILLE {
+        serial  ville_id PK
+        varchar nom_ville
+        varchar code_postal
+        int     region_id FK
+    }
+    ORG_PAYS {
+        smallserial org_pays_id PK
+        varchar     nom_org_pays
+    }
+    ORG_COMPAGNIE {
+        serial   org_compagnie_id PK
+        varchar  nom_org_compagnie
+        smallint org_pays_id FK
+    }
+    ORG_DEPARTEMENT {
+        serial  org_departement_id PK
+        varchar nom_org_departement
+        int     org_compagnie_id FK
+    }
+    ORG_SECTION {
+        serial  org_section_id PK
+        varchar nom_org_section
+        int     org_departement_id FK
+    }
+    ORG_GROUPE {
+        serial  org_groupe_id PK
+        varchar nom_org_groupe
+        int     org_section_id FK
+    }
+    EMPLOYE {
+        bigserial employe_id PK
+        varchar   nom
+        varchar   prenom
+        char      sexe
+        date      date_naissance
+        date      date_embauche
+        date      date_depart
+        numeric   salaire
+        bigint    manager_id FK "auto-référence"
+        int       org_groupe_id FK
+        int       ville_id FK
+    }
+    CONTRAT_EMPLOYE {
+        bigserial contrat_id PK
+        bigint    employe_id FK
+        date      date_debut
+        date      date_fin
+        varchar   type_contrat
+    }

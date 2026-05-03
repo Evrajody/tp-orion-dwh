@@ -1,0 +1,41 @@
+%%{init: {"theme":"neutral","sequence":{"actorMargin":35,"width":170,"showSequenceNumbers":true}}}%%
+sequenceDiagram
+    autonumber
+    participant Sch as APScheduler<br/>(orchestrator)
+    participant Orc as orchestrate.py
+    participant OLTP as Postgres<br/>OLTP (ops)
+    participant Stg as SQL Server<br/>staging.*
+    participant Sp as SQL Server<br/>etl.sp_*
+    participant Dim as SQL Server<br/>dim.* / fact.*
+    participant DWH as Postgres<br/>DWH (dw)
+    participant Log as etl.run_log
+
+    Sch->>Orc: trigger run_full_pipeline()
+
+    rect rgb(255, 248, 220)
+      note right of Orc: 1) EXTRACT — OLTP → staging
+      Orc->>OLTP: SELECT * (jointures dénormalisées)
+      OLTP-->>Orc: rows
+      Orc->>Stg: TRUNCATE staging.* + INSERT (executemany)
+    end
+
+    rect rgb(220, 235, 255)
+      note right of Orc: 2) TRANSFORM — T-SQL exécuté localement
+      Orc->>Sp: EXEC etl.sp_run_pipeline
+      Sp->>Log: INSERT run_log RUNNING
+      Sp->>Dim: TRUNCATE + INSERT dim.*<br/>(SCD1 : geographie, fournisseur,<br/>canal, produit, date)
+      Sp->>Dim: MERGE SCD2 (dim_client<br/>+ dim_employe) via hash_ligne
+      Sp->>Dim: INSERT fact.fait_ventes<br/>(lookup surrogate keys,<br/>calcul net/cout/marge)
+      Sp->>Log: UPDATE run_log SUCCESS
+      Sp-->>Orc: ok
+    end
+
+    rect rgb(232, 240, 232)
+      note right of Orc: 3) LOAD — SQL Server → DWH
+      Orc->>Sp: SELECT * FROM dim.*, fact.*
+      Sp-->>Orc: rows transformées
+      Orc->>DWH: TRUNCATE dw.* CASCADE<br/>COPY dw.dim_* / dw.fait_ventes
+      DWH-->>Orc: ok
+    end
+
+    Orc-->>Sch: run terminé (durée ms)
