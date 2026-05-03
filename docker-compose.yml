@@ -1,0 +1,159 @@
+services:
+  # ---------------------------------------------------------------------------
+  # Base opérationnelle (OLTP) : Postgres
+  # ---------------------------------------------------------------------------
+  postgres-oltp:
+    image: postgres:16-alpine
+    container_name: orion-oltp
+    environment:
+      POSTGRES_DB: ${OLTP_DB}
+      POSTGRES_USER: ${OLTP_USER}
+      POSTGRES_PASSWORD: ${OLTP_PASSWORD}
+    ports:
+      - "${OLTP_PORT}:5432"
+    volumes:
+      - oltp_data:/var/lib/postgresql/data
+      - ./oltp/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${OLTP_USER} -d ${OLTP_DB}"]
+      interval: 5s
+      retries: 10
+    networks: [orion-net]
+
+  # ---------------------------------------------------------------------------
+  # Entrepôt de données (DWH) : Postgres — schéma en étoile
+  # ---------------------------------------------------------------------------
+  postgres-dwh:
+    image: postgres:16-alpine
+    container_name: orion-dwh
+    environment:
+      POSTGRES_DB: ${DWH_DB}
+      POSTGRES_USER: ${DWH_USER}
+      POSTGRES_PASSWORD: ${DWH_PASSWORD}
+    ports:
+      - "${DWH_PORT}:5432"
+    volumes:
+      - dwh_data:/var/lib/postgresql/data
+      - ./dwh/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DWH_USER} -d ${DWH_DB}"]
+      interval: 5s
+      retries: 10
+    networks: [orion-net]
+
+  # ---------------------------------------------------------------------------
+  # Moteur ETL : SQL Server 2022 — héberge la base OrionETL et toutes les
+  # procédures stockées T-SQL qui transforment les données.
+  # ---------------------------------------------------------------------------
+  mssql-etl:
+    build: ./mssql-etl
+    container_name: orion-mssql-etl
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: ${MSSQL_PID}
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      MSSQL_AGENT_ENABLED: "true"
+    ports:
+      - "${MSSQL_PORT}:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql
+    healthcheck:
+      # /opt/mssql-tools18/bin/sqlcmd existe dès que SQL Server démarre
+      test: ["CMD-SHELL",
+             "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -No -Q \"SELECT 1\" || exit 1"]
+      interval: 15s
+      retries: 12
+      start_period: 60s
+    networks: [orion-net]
+
+  # ---------------------------------------------------------------------------
+  # Orchestrateur ETL : transporte les données entre Postgres et SQL Server.
+  # Toute la logique ETL est dans les procédures T-SQL ci-dessus.
+  # ---------------------------------------------------------------------------
+  orchestrator:
+    build: ./orchestrator
+    container_name: orion-orchestrator
+    environment:
+      OLTP_HOST: postgres-oltp
+      OLTP_PORT: 5432
+      OLTP_DB: ${OLTP_DB}
+      OLTP_USER: ${OLTP_USER}
+      OLTP_PASSWORD: ${OLTP_PASSWORD}
+      DWH_HOST: postgres-dwh
+      DWH_PORT: 5432
+      DWH_DB: ${DWH_DB}
+      DWH_USER: ${DWH_USER}
+      DWH_PASSWORD: ${DWH_PASSWORD}
+      MSSQL_HOST: mssql-etl
+      MSSQL_PORT: 1433
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      ETL_DAILY_FACT_CRON_HOUR: ${ETL_DAILY_FACT_CRON_HOUR}
+      ETL_DAILY_FACT_CRON_MINUTE: ${ETL_DAILY_FACT_CRON_MINUTE}
+      ETL_RUN_ON_START: ${ETL_RUN_ON_START}
+    depends_on:
+      postgres-oltp:
+        condition: service_healthy
+      postgres-dwh:
+        condition: service_healthy
+      mssql-etl:
+        condition: service_healthy
+    networks: [orion-net]
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Générateur de données fictives (Faker) — peuple Postgres OLTP
+  # ---------------------------------------------------------------------------
+  data-gen:
+    build: ./data-gen
+    container_name: orion-data-gen
+    environment:
+      OLTP_HOST: postgres-oltp
+      OLTP_PORT: 5432
+      OLTP_DB: ${OLTP_DB}
+      OLTP_USER: ${OLTP_USER}
+      OLTP_PASSWORD: ${OLTP_PASSWORD}
+      NB_EMPLOYEES: ${GEN_NB_EMPLOYEES}
+      NB_SUPPLIERS: ${GEN_NB_SUPPLIERS}
+      NB_PRODUCTS: ${GEN_NB_PRODUCTS}
+      NB_CUSTOMERS: ${GEN_NB_CUSTOMERS}
+      NB_ORDERS: ${GEN_NB_ORDERS}
+      DATE_START: ${GEN_DATE_START}
+      DATE_END: ${GEN_DATE_END}
+      SEED: ${GEN_SEED}
+    depends_on:
+      postgres-oltp:
+        condition: service_healthy
+    profiles: ["seed"]
+    networks: [orion-net]
+
+  # ---------------------------------------------------------------------------
+  # Adminer : UI web unique pour Postgres OLTP, Postgres DWH et SQL Server
+  # → http://localhost:${ADMINER_PORT}
+  # → 3 cibles pré-configurées via adminer/index.php (login-servers).
+  # ---------------------------------------------------------------------------
+  adminer:
+    image: adminer:5
+    container_name: orion-adminer
+    environment:
+      ADMINER_DESIGN: ${ADMINER_DESIGN}
+      ADMINER_DEFAULT_DRIVER: pgsql
+      ADMINER_DEFAULT_SERVER: postgres-oltp
+    ports:
+      - "${ADMINER_PORT}:8080"
+    volumes:
+      - ./adminer/index.php:/var/www/html/index.php:ro
+    depends_on:
+      - postgres-oltp
+      - postgres-dwh
+      - mssql-etl
+    networks: [orion-net]
+    restart: unless-stopped
+
+volumes:
+  oltp_data:
+  dwh_data:
+  mssql_data:
+
+networks:
+  orion-net:
+    driver: bridge
