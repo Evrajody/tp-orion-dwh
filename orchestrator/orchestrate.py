@@ -284,6 +284,89 @@ def run_full_pipeline():
         log.exception("ETL run FAILED : %s", exc)
 
 
+# ---------------------------------------------------------------------------
+# Mode unitaire — pédagogique : 1 seule commande de bout en bout
+# ---------------------------------------------------------------------------
+UNIT_LIGNES_COMMANDE_SQL = """
+    SELECT o.commande_id, l.numero_ligne, o.date_commande,
+           o.client_id, o.employe_id, o.canal_id,
+           l.produit_id, p.fournisseur_id,
+           c.ville_id   AS cli_ville_id,
+           l.quantite, l.prix_unitaire, l.cout_unitaire, l.pct_remise
+      FROM ops.commande        o
+      JOIN ops.ligne_commande  l  ON l.commande_id = o.commande_id
+      JOIN ops.produit         p  ON p.produit_id  = l.produit_id
+      JOIN ops.client          c  ON c.client_id   = o.client_id
+     WHERE o.commande_id = %s
+"""
+
+
+def load_staging_unit(pg_oltp, ms, commande_id: int):
+    """
+    Identique à load_staging mais ne stage qu'UNE commande dans
+    staging.lignes_commande. Les dimensions sont entièrement stagées
+    pour que les jointures de sp_load_fait_ventes aboutissent.
+    """
+    cur_ms = ms.cursor()
+    cur_pg = pg_oltp.cursor()
+
+    for table, sql in EXTRACTS.items():
+        cur_ms.execute(f"TRUNCATE TABLE {table};")
+        if table == "staging.lignes_commande":
+            cur_pg.execute(UNIT_LIGNES_COMMANDE_SQL, (commande_id,))
+        else:
+            cur_pg.execute(sql)
+        rows = cur_pg.fetchall()
+        if not rows:
+            log.info("staging %s : 0 ligne", table)
+            continue
+        cols = COLUMNS[table]
+        placeholders = ",".join(["?"] * len(cols))
+        cur_ms.fast_executemany = True
+        cur_ms.executemany(
+            f"INSERT {table} ({','.join(cols)}) VALUES ({placeholders})",
+            rows,
+        )
+        log.info("staging %s : %d lignes chargées", table, len(rows))
+        if table == "staging.lignes_commande":
+            for r in rows:
+                log.info("    >>> ligne unitaire : %s", dict(zip(cols, r)))
+    ms.commit()
+
+
+def run_unit_pipeline(commande_id: int | None = None):
+    """
+    Pipeline ETL exécuté pour une SEULE commande, pour comprendre le
+    parcours d'une ligne bout en bout. Vide fact.fait_ventes côté SQL Server
+    pour isoler la commande étudiée dans le DWH final.
+    """
+    log.info("=== ETL UNIT run start ===")
+    started = time.time()
+    try:
+        with both_connections() as (pg_oltp, pg_dwh, ms):
+            if commande_id is None:
+                cur = pg_oltp.cursor()
+                cur.execute("SELECT MIN(commande_id) FROM ops.commande")
+                row = cur.fetchone()
+                if not row or row[0] is None:
+                    log.error("aucune commande trouvée dans ops.commande")
+                    return
+                commande_id = row[0]
+            log.info("mode unitaire : commande_id = %d", commande_id)
+
+            cur_ms = ms.cursor()
+            cur_ms.execute("TRUNCATE TABLE fact.fait_ventes;")
+            cur_ms.execute("DELETE FROM etl.watermark WHERE job_name = 'fait_ventes';")
+            ms.commit()
+
+            load_staging_unit(pg_oltp, ms, commande_id)
+            run_pipeline(ms)
+            push_to_dwh(ms, pg_dwh)
+        log.info("=== ETL UNIT run OK en %.1fs ===", time.time() - started)
+    except Exception as exc:
+        log.exception("ETL UNIT run FAILED : %s", exc)
+
+
 def main():
     if os.getenv("ETL_RUN_ON_START", "true").lower() == "true":
         log.info("attente 15s pour démarrage SQL Server …")

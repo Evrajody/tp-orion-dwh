@@ -7,7 +7,7 @@
 COMPOSE ?= docker compose
 
 .DEFAULT_GOAL := help
-.PHONY: help up down clean nuke build rebuild seed fresh ps logs restart-orchestrator
+.PHONY: help up down clean nuke build rebuild seed fresh ps logs restart-orchestrator dwh-clean etl-run etl-run-unit
 
 help:  ## affiche les cibles disponibles
 	@awk 'BEGIN{FS=":.*?## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -53,3 +53,14 @@ logs:  ## suit les logs (ex : make logs S=mssql-etl)
 
 restart-orchestrator:  ## relance le service orchestrateur
 	$(COMPOSE) restart orchestrator
+
+# --- maintenance DWH / ETL --------------------------------------------------
+
+dwh-clean:  ## vide entièrement le DWH Postgres (faits, dimensions, méta ETL)
+	$(COMPOSE) exec -T postgres-dwh sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "TRUNCATE dw.fait_ventes, dw.dim_client, dw.dim_employe, dw.dim_produit, dw.dim_fournisseur, dw.dim_geographie, dw.dim_canal, dw.dim_date, dw.etl_watermark, dw.etl_run_log RESTART IDENTITY CASCADE;"'
+
+etl-run:  ## lance une session de chargement ETL (synchrone, dans l'orchestrateur)
+	$(COMPOSE) exec -T orchestrator python -c "from orchestrate import run_full_pipeline; run_full_pipeline()"
+
+etl-run-unit:  ## lance l'ETL pour 1 seule commande (ID=<commande_id>, défaut = MIN)
+	$(COMPOSE) exec -T orchestrator python -c "from orchestrate import run_unit_pipeline; run_unit_pipeline($(if $(ID),$(ID),None))"
