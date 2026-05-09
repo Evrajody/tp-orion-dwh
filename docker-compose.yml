@@ -139,6 +139,10 @@ services:
       ADMINER_DESIGN: ${ADMINER_DESIGN}
       ADMINER_DEFAULT_DRIVER: pgsql
       ADMINER_DEFAULT_SERVER: postgres-oltp
+      ADMINER_DEFAULT_USERNAME: ${OLTP_USER}
+      ADMINER_DEFAULT_DB: ${OLTP_DB}
+    volumes:
+      - ./adminer/orion-defaults.php:/var/www/html/plugins-enabled/orion-defaults.php:ro
     ports:
       - "${ADMINER_OLTP_PORT}:8080"
     depends_on:
@@ -153,6 +157,10 @@ services:
       ADMINER_DESIGN: ${ADMINER_DESIGN}
       ADMINER_DEFAULT_DRIVER: pgsql
       ADMINER_DEFAULT_SERVER: postgres-dwh
+      ADMINER_DEFAULT_USERNAME: ${DWH_USER}
+      ADMINER_DEFAULT_DB: ${DWH_DB}
+    volumes:
+      - ./adminer/orion-defaults.php:/var/www/html/plugins-enabled/orion-defaults.php:ro
     ports:
       - "${ADMINER_DWH_PORT}:8080"
     depends_on:
@@ -167,6 +175,10 @@ services:
       ADMINER_DESIGN: ${ADMINER_DESIGN}
       ADMINER_DEFAULT_DRIVER: mssql
       ADMINER_DEFAULT_SERVER: mssql-etl
+      ADMINER_DEFAULT_USERNAME: sa
+      ADMINER_DEFAULT_DB: OrionETL
+    volumes:
+      - ./adminer/orion-defaults.php:/var/www/html/plugins-enabled/orion-defaults.php:ro
     ports:
       - "${ADMINER_MSSQL_PORT}:8080"
     depends_on:

@@ -118,9 +118,10 @@ BEGIN
          WHERE d.cle_client IS NULL OR d.hash_ligne <> s.hash_ligne;
 
         DECLARE @inserted BIGINT = @@ROWCOUNT;
+        DECLARE @rows_in BIGINT = (SELECT COUNT(*) FROM staging.client_full);
 
         EXEC etl.sp_run_end @run_id, N'SUCCESS',
-             @rows_in  = (SELECT COUNT(*) FROM staging.client_full),
+             @rows_in  = @rows_in,
              @rows_out = @inserted;
     END TRY
     BEGIN CATCH
@@ -216,8 +217,9 @@ BEGIN
          WHERE d.cle_employe IS NULL OR d.hash_ligne <> s.hash_ligne;
 
         DECLARE @inserted BIGINT = @@ROWCOUNT;
+        DECLARE @rows_in BIGINT = (SELECT COUNT(*) FROM staging.employe_full);
         EXEC etl.sp_run_end @run_id, N'SUCCESS',
-             @rows_in  = (SELECT COUNT(*) FROM staging.employe_full),
+             @rows_in  = @rows_in,
              @rows_out = @inserted;
     END TRY
     BEGIN CATCH
