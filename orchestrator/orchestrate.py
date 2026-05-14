@@ -139,6 +139,19 @@ EXTRACTS = {
                og.nom_org_groupe               AS org_groupe,
                (m.nom || ' ' || m.prenom)      AS nom_manager,
                e.date_embauche, e.date_depart,
+               -- Reflet du contrat courant (LATERAL : 1 contrat ouvert ou
+               -- le plus récent par employé)
+               cc.type_contrat                 AS type_contrat_courant,
+               cc.date_debut                   AS date_debut_contrat,
+               cc.date_fin                     AS date_fin_contrat,
+               CASE
+                 WHEN cc.contrat_id   IS NULL                       THEN 'SansContrat'
+                 WHEN cc.date_fin     IS NULL                       THEN 'Actif'
+                 WHEN cc.date_fin     >= CURRENT_DATE               THEN 'Actif'
+                 ELSE                                                    'Expire'
+               END                             AS statut_contrat,
+               (SELECT COUNT(*) FROM ops.contrat_employe ce
+                 WHERE ce.employe_id = e.employe_id) AS nb_contrats_signes,
                e.maj_le
           FROM ops.employe          e
           JOIN ops.org_groupe       og  ON og.org_groupe_id      = e.org_groupe_id
@@ -147,6 +160,14 @@ EXTRACTS = {
           JOIN ops.org_compagnie    oc  ON oc.org_compagnie_id   = od.org_compagnie_id
           JOIN ops.org_pays         op  ON op.org_pays_id        = oc.org_pays_id
           LEFT JOIN ops.employe     m   ON m.employe_id          = e.manager_id
+          LEFT JOIN LATERAL (
+                SELECT contrat_id, type_contrat, date_debut, date_fin
+                  FROM ops.contrat_employe ce
+                 WHERE ce.employe_id = e.employe_id
+                 ORDER BY (date_fin IS NULL) DESC,    -- contrats ouverts d'abord
+                          date_debut DESC
+                 LIMIT 1
+          ) cc ON TRUE
     """,
     "staging.lignes_commande": """
         SELECT o.commande_id, l.numero_ligne, o.date_commande,
@@ -177,6 +198,8 @@ COLUMNS = {
     "staging.employe_full":     ["employe_id","nom_complet","sexe","date_naissance","salaire",
                                  "org_pays","org_compagnie","org_departement","org_section",
                                  "org_groupe","nom_manager","date_embauche","date_depart",
+                                 "type_contrat_courant","date_debut_contrat","date_fin_contrat",
+                                 "statut_contrat","nb_contrats_signes",
                                  "maj_le"],
     "staging.lignes_commande":  ["commande_id","numero_ligne","date_commande","client_id",
                                  "employe_id","canal_id","produit_id","fournisseur_id",

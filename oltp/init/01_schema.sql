@@ -104,9 +104,11 @@ CREATE TABLE contrat_employe (
     employe_id    BIGINT       NOT NULL REFERENCES employe(employe_id) ON DELETE CASCADE,
     date_debut    DATE         NOT NULL,
     date_fin      DATE,
-    type_contrat  VARCHAR(30)  NOT NULL,
+    type_contrat  VARCHAR(30)  NOT NULL
+                    CHECK (type_contrat IN ('CDI','CDD','Interim','Stage','Alternance','Freelance')),
     CHECK (date_fin IS NULL OR date_fin >= date_debut)
 );
+CREATE INDEX idx_contrat_employe_employe ON contrat_employe(employe_id, date_debut DESC);
 
 -- ----------------------------------------------------------------
 -- Hiérarchie produit (4 niveaux) + fournisseurs

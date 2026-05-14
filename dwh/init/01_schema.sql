@@ -124,6 +124,12 @@ CREATE TABLE dim_employe (
     nom_manager         VARCHAR(160),
     date_embauche       DATE          NOT NULL,
     date_depart         DATE,
+    -- Reflet du contrat (cf. doc/rapport/modelisation-revue.pdf §4.6)
+    type_contrat_courant VARCHAR(30),
+    date_debut_contrat   DATE,
+    date_fin_contrat     DATE,
+    statut_contrat       VARCHAR(20),
+    nb_contrats_signes   INT,
     -- SCD2
     effectif_du         DATE          NOT NULL,
     effectif_au         DATE,

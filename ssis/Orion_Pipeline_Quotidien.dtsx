@@ -1,0 +1,911 @@
+<?xml version="1.0"?>
+<DTS:Executable xmlns:DTS="www.microsoft.com/SqlServer/Dts"
+  DTS:refId="Package"
+  DTS:CreationDate="5/14/2026 4:15:44 PM"
+  DTS:CreationName="Microsoft.Package"
+  DTS:CreatorComputerName="ORION-DEV"
+  DTS:CreatorName="ORION-DEV\orion"
+  DTS:DTSID="{8DB87D16-B8A2-51CD-867F-E7FA3E1143BB}"
+  DTS:ExecutableType="Microsoft.Package"
+  DTS:LastModifiedProductVersion="17.0.1016.0"
+  DTS:LocaleID="1036"
+  DTS:ObjectName="Orion_Pipeline_Quotidien"
+  DTS:PackageType="5"
+  DTS:VersionBuild="1"
+  DTS:VersionGUID="{1D3C8DDE-4FE4-5FCF-B1BF-0B78F4A4B694}">
+  <DTS:Property
+    DTS:Name="PackageFormatVersion">8</DTS:Property>
+  <DTS:Variables>
+    <DTS:Variable
+      DTS:CreationName=""
+      DTS:DTSID="{38D22378-A413-5C65-AF8C-A0320E4E4C1E}"
+      DTS:IncludeInDebugDump="2345"
+      DTS:Namespace="User"
+      DTS:ObjectName="ConnString">
+      <DTS:VariableValue
+        DTS:DataType="8"
+        xml:space="preserve"></DTS:VariableValue>
+    </DTS:Variable>
+    <DTS:Variable
+      DTS:CreationName=""
+      DTS:DTSID="{05BA500C-9BCF-584D-8DC6-9041449154C9}"
+      DTS:IncludeInDebugDump="6789"
+      DTS:Namespace="User"
+      DTS:ObjectName="LignesIn">
+      <DTS:VariableValue
+        DTS:DataType="3">0</DTS:VariableValue>
+    </DTS:Variable>
+    <DTS:Variable
+      DTS:CreationName=""
+      DTS:DTSID="{CA0C18BA-F53E-5EF7-8D63-9AE5692652ED}"
+      DTS:IncludeInDebugDump="6789"
+      DTS:Namespace="User"
+      DTS:ObjectName="LignesOut">
+      <DTS:VariableValue
+        DTS:DataType="3">0</DTS:VariableValue>
+    </DTS:Variable>
+    <DTS:Variable
+      DTS:CreationName=""
+      DTS:DTSID="{DBE78E60-2216-5971-AE5E-1E2D02D66A4E}"
+      DTS:IncludeInDebugDump="6789"
+      DTS:Namespace="User"
+      DTS:ObjectName="Watermark">
+      <DTS:VariableValue
+        DTS:DataType="7">1/1/1900 12:00:00 AM</DTS:VariableValue>
+    </DTS:Variable>
+  </DTS:Variables>
+  <DTS:Executables>
+      <DTS:Executable
+        DTS:refId="Package\SEQ_Pipeline_Complet"
+        DTS:CreationName="STOCK:SEQUENCE"
+        DTS:Description="Conteneur de séquences"
+        DTS:DTSID="{E3936585-7043-5011-B966-07B7A6AFD08F}"
+        DTS:ExecutableType="STOCK:SEQUENCE"
+        DTS:LocaleID="-1"
+        DTS:ObjectName="SEQ_Pipeline_Complet">
+        <DTS:Variables />
+        <DTS:Executables>
+        <DTS:Executable
+          DTS:refId="Package\SEQ_Pipeline_Complet\SQL_Lire_Watermark"
+          DTS:CreationName="Microsoft.ExecuteSQLTask"
+          DTS:Description="Lit le watermark courant depuis OrionETL.etl.watermark"
+          DTS:DTSID="{D98790D4-D51F-52B1-BAE4-ABA66E806058}"
+          DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+          DTS:LocaleID="-1"
+          DTS:ObjectName="SQL_Lire_Watermark"
+          DTS:TaskContact="Execute SQL Task; Microsoft Corporation; SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1"
+          DTS:ThreadHint="1">
+          <DTS:Variables />
+          <DTS:ObjectData>
+            <SQLTask:SqlTaskData
+              SQLTask:SqlStatementSource="SELECT ISNULL(MAX(last_value), '1900-01-01') FROM etl.watermark WHERE job_name = 'fait_ventes';"
+              SQLTask:ResultType="ResultSetType_SingleRow"
+              xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask">
+              <SQLTask:ResultBinding
+                SQLTask:ResultName="ResultName0"
+                SQLTask:DtsVariableName="User::Watermark" />
+            </SQLTask:SqlTaskData>
+          </DTS:ObjectData>
+        </DTS:Executable>
+        <DTS:Executable
+          DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging"
+          DTS:CreationName="STOCK:SEQUENCE"
+          DTS:Description="Conteneur de séquences"
+          DTS:DTSID="{2E8E018F-5A1A-5E2C-B1FA-302131B9A99F}"
+          DTS:ExecutableType="STOCK:SEQUENCE"
+          DTS:LocaleID="-1"
+          DTS:ObjectName="SEQ_Chargement_Staging">
+          <DTS:Variables />
+          <DTS:Executables>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\Truncate_Geographie"
+            DTS:CreationName="Microsoft.ExecuteSQLTask"
+            DTS:Description="Vide la table staging avant DFT_Staging_Geographie"
+            DTS:DTSID="{B2E02BA9-4F38-5ADB-9C43-9794C4B9C706}"
+            DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="Truncate_Geographie"
+            DTS:TaskContact="Execute SQL Task; Microsoft Corporation; SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1"
+            DTS:ThreadHint="1">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <SQLTask:SqlTaskData
+              SQLTask:SqlStatementSource="TRUNCATE TABLE staging.geographie_full;"
+              xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Geographie"
+            DTS:CreationName="Microsoft.Pipeline"
+            DTS:Description="Tâche de flux de données"
+            DTS:DTSID="{03D672A9-1C64-54F2-A946-E5D34D543810}"
+            DTS:ExecutableType="Microsoft.Pipeline"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="DFT_Staging_Geographie"
+            DTS:TaskContact="Performs high-performance data extraction, transformation and loading;Microsoft Corporation; Microsoft SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <pipeline
+                version="1" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\Truncate_Fournisseur"
+            DTS:CreationName="Microsoft.ExecuteSQLTask"
+            DTS:Description="Vide la table staging avant DFT_Staging_Fournisseur"
+            DTS:DTSID="{B2DFCDE9-4748-514C-A454-C0BE68945ABC}"
+            DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="Truncate_Fournisseur"
+            DTS:TaskContact="Execute SQL Task; Microsoft Corporation; SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1"
+            DTS:ThreadHint="2">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <SQLTask:SqlTaskData
+              SQLTask:SqlStatementSource="TRUNCATE TABLE staging.fournisseur_full;"
+              xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Fournisseur"
+            DTS:CreationName="Microsoft.Pipeline"
+            DTS:Description="Tâche de flux de données"
+            DTS:DTSID="{8E6537E7-E9B1-507D-9723-52CAA2E7B7B8}"
+            DTS:ExecutableType="Microsoft.Pipeline"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="DFT_Staging_Fournisseur"
+            DTS:TaskContact="Performs high-performance data extraction, transformation and loading;Microsoft Corporation; Microsoft SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <pipeline
+                version="1" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\Truncate_Canal"
+            DTS:CreationName="Microsoft.ExecuteSQLTask"
+            DTS:Description="Vide la table staging avant DFT_Staging_Canal"
+            DTS:DTSID="{9E00B4B0-9C32-5F76-A6CD-49DA7FD1B6B5}"
+            DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="Truncate_Canal"
+            DTS:TaskContact="Execute SQL Task; Microsoft Corporation; SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1"
+            DTS:ThreadHint="3">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <SQLTask:SqlTaskData
+              SQLTask:SqlStatementSource="TRUNCATE TABLE staging.canal;"
+              xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Canal"
+            DTS:CreationName="Microsoft.Pipeline"
+            DTS:Description="Tâche de flux de données"
+            DTS:DTSID="{F70EA99C-1148-56A7-9F50-88DED86C5723}"
+            DTS:ExecutableType="Microsoft.Pipeline"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="DFT_Staging_Canal"
+            DTS:TaskContact="Performs high-performance data extraction, transformation and loading;Microsoft Corporation; Microsoft SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <pipeline
+                version="1" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\Truncate_Produit"
+            DTS:CreationName="Microsoft.ExecuteSQLTask"
+            DTS:Description="Vide la table staging avant DFT_Staging_Produit"
+            DTS:DTSID="{F2C7FFB0-315E-5DCF-8DE1-9D5829BC926A}"
+            DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="Truncate_Produit"
+            DTS:TaskContact="Execute SQL Task; Microsoft Corporation; SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1"
+            DTS:ThreadHint="4">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <SQLTask:SqlTaskData
+              SQLTask:SqlStatementSource="TRUNCATE TABLE staging.produit_full;"
+              xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Produit"
+            DTS:CreationName="Microsoft.Pipeline"
+            DTS:Description="Tâche de flux de données"
+            DTS:DTSID="{F75B7CF7-2565-56B8-8EC9-C91700E917B6}"
+            DTS:ExecutableType="Microsoft.Pipeline"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="DFT_Staging_Produit"
+            DTS:TaskContact="Performs high-performance data extraction, transformation and loading;Microsoft Corporation; Microsoft SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <pipeline
+                version="1" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\Truncate_Client"
+            DTS:CreationName="Microsoft.ExecuteSQLTask"
+            DTS:Description="Vide la table staging avant DFT_Staging_Client"
+            DTS:DTSID="{371C78AB-B5B5-5287-9018-138D294E4D83}"
+            DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="Truncate_Client"
+            DTS:TaskContact="Execute SQL Task; Microsoft Corporation; SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1"
+            DTS:ThreadHint="5">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <SQLTask:SqlTaskData
+              SQLTask:SqlStatementSource="TRUNCATE TABLE staging.client_full;"
+              xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Client"
+            DTS:CreationName="Microsoft.Pipeline"
+            DTS:Description="Tâche de flux de données"
+            DTS:DTSID="{D9088112-D7C1-5E95-AE8B-D7BF05B0D18D}"
+            DTS:ExecutableType="Microsoft.Pipeline"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="DFT_Staging_Client"
+            DTS:TaskContact="Performs high-performance data extraction, transformation and loading;Microsoft Corporation; Microsoft SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <pipeline
+                version="1" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\Truncate_Employe"
+            DTS:CreationName="Microsoft.ExecuteSQLTask"
+            DTS:Description="Vide la table staging avant DFT_Staging_Employe"
+            DTS:DTSID="{A184C92F-3BC3-5858-838E-EA4D5DF4DCE4}"
+            DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="Truncate_Employe"
+            DTS:TaskContact="Execute SQL Task; Microsoft Corporation; SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1"
+            DTS:ThreadHint="6">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <SQLTask:SqlTaskData
+              SQLTask:SqlStatementSource="TRUNCATE TABLE staging.employe_full;"
+              xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Employe"
+            DTS:CreationName="Microsoft.Pipeline"
+            DTS:Description="Tâche de flux de données"
+            DTS:DTSID="{9AB74619-4A28-5B84-8FE4-4B108050728C}"
+            DTS:ExecutableType="Microsoft.Pipeline"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="DFT_Staging_Employe"
+            DTS:TaskContact="Performs high-performance data extraction, transformation and loading;Microsoft Corporation; Microsoft SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <pipeline
+                version="1" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\Truncate_Lignes_Commande"
+            DTS:CreationName="Microsoft.ExecuteSQLTask"
+            DTS:Description="Vide la table staging avant DFT_Staging_Lignes_Commande"
+            DTS:DTSID="{69B99B56-17E0-5129-BECD-FE914FCE26FB}"
+            DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="Truncate_Lignes_Commande"
+            DTS:TaskContact="Execute SQL Task; Microsoft Corporation; SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1"
+            DTS:ThreadHint="7">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <SQLTask:SqlTaskData
+              SQLTask:SqlStatementSource="TRUNCATE TABLE staging.lignes_commande;"
+              xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Lignes_Commande"
+            DTS:CreationName="Microsoft.Pipeline"
+            DTS:Description="Tâche de flux de données"
+            DTS:DTSID="{F8C55A26-51D5-539A-ACDD-5397CBDC10ED}"
+            DTS:ExecutableType="Microsoft.Pipeline"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="DFT_Staging_Lignes_Commande"
+            DTS:TaskContact="Performs high-performance data extraction, transformation and loading;Microsoft Corporation; Microsoft SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <pipeline
+                version="1" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          </DTS:Executables>
+          <DTS:PrecedenceConstraints>
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging.PrecedenceConstraints[PC_Truncate_Geographie]"
+            DTS:CreationName=""
+            DTS:DTSID="{924818CE-B09A-590F-8EBE-C6AC57E80738}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\Truncate_Geographie"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_Truncate_Geographie"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Geographie"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging.PrecedenceConstraints[PC_Truncate_Fournisseur]"
+            DTS:CreationName=""
+            DTS:DTSID="{7AAAFC90-60A3-51A5-85DB-4C3BF4E44BAF}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\Truncate_Fournisseur"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_Truncate_Fournisseur"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Fournisseur"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging.PrecedenceConstraints[PC_Truncate_Canal]"
+            DTS:CreationName=""
+            DTS:DTSID="{B1B635E1-5BDF-5B7E-A5E2-4B3A84C5A7A3}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\Truncate_Canal"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_Truncate_Canal"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Canal"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging.PrecedenceConstraints[PC_Truncate_Produit]"
+            DTS:CreationName=""
+            DTS:DTSID="{B6D1DEC9-D7FF-5514-9FF8-7965AF95B859}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\Truncate_Produit"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_Truncate_Produit"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Produit"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging.PrecedenceConstraints[PC_Truncate_Client]"
+            DTS:CreationName=""
+            DTS:DTSID="{52589856-5DF0-5ED4-9566-00C2A8533901}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\Truncate_Client"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_Truncate_Client"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Client"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging.PrecedenceConstraints[PC_Truncate_Employe]"
+            DTS:CreationName=""
+            DTS:DTSID="{EE806228-896B-5F0D-990B-EB5CE1F3CDDA}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\Truncate_Employe"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_Truncate_Employe"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Employe"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging.PrecedenceConstraints[PC_Truncate_Lignes_Commande]"
+            DTS:CreationName=""
+            DTS:DTSID="{47289ED8-9253-57C4-8A49-A9F20D1D59F2}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\Truncate_Lignes_Commande"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_Truncate_Lignes_Commande"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Lignes_Commande"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging.PrecedenceConstraints[PC_DFT_Staging_Geographie_to_DFT_Staging_Lignes_Commande]"
+            DTS:CreationName=""
+            DTS:DTSID="{CE309C39-D91A-5C52-96B8-3F7F3D188265}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Geographie"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_DFT_Staging_Geographie_to_DFT_Staging_Lignes_Commande"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Lignes_Commande"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging.PrecedenceConstraints[PC_DFT_Staging_Fournisseur_to_DFT_Staging_Lignes_Commande]"
+            DTS:CreationName=""
+            DTS:DTSID="{AF28AEBE-537E-52A6-91CC-8A3DABD842CC}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Fournisseur"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_DFT_Staging_Fournisseur_to_DFT_Staging_Lignes_Commande"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Lignes_Commande"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging.PrecedenceConstraints[PC_DFT_Staging_Canal_to_DFT_Staging_Lignes_Commande]"
+            DTS:CreationName=""
+            DTS:DTSID="{11BD59E0-CF91-5330-A45B-732EE60EC198}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Canal"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_DFT_Staging_Canal_to_DFT_Staging_Lignes_Commande"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Lignes_Commande"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging.PrecedenceConstraints[PC_DFT_Staging_Produit_to_DFT_Staging_Lignes_Commande]"
+            DTS:CreationName=""
+            DTS:DTSID="{9EA705B3-15DD-50C2-B232-F1BDFC11884C}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Produit"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_DFT_Staging_Produit_to_DFT_Staging_Lignes_Commande"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Lignes_Commande"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging.PrecedenceConstraints[PC_DFT_Staging_Client_to_DFT_Staging_Lignes_Commande]"
+            DTS:CreationName=""
+            DTS:DTSID="{8C75A068-614C-5678-993D-53D2A87F6C43}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Client"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_DFT_Staging_Client_to_DFT_Staging_Lignes_Commande"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Lignes_Commande"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging.PrecedenceConstraints[PC_DFT_Staging_Employe_to_DFT_Staging_Lignes_Commande]"
+            DTS:CreationName=""
+            DTS:DTSID="{169A275F-D1FB-5AA0-BF90-1D44F1D54936}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Employe"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_DFT_Staging_Employe_to_DFT_Staging_Lignes_Commande"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging\DFT_Staging_Lignes_Commande"
+            DTS:Value="0" />
+          </DTS:PrecedenceConstraints>
+        </DTS:Executable>
+        <DTS:Executable
+          DTS:refId="Package\SEQ_Pipeline_Complet\SQL_Exec_sp_run_pipeline"
+          DTS:CreationName="Microsoft.ExecuteSQLTask"
+          DTS:Description="Execute etl.sp_run_pipeline (transformations T-SQL)"
+          DTS:DTSID="{91FBA3B4-B10D-5075-A11A-0F862FCD0528}"
+          DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+          DTS:LocaleID="-1"
+          DTS:ObjectName="SQL_Exec_sp_run_pipeline"
+          DTS:TaskContact="Execute SQL Task; Microsoft Corporation; SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1"
+          DTS:ThreadHint="2">
+          <DTS:Variables />
+          <DTS:ObjectData>
+            <SQLTask:SqlTaskData
+              SQLTask:SqlStatementSource="EXEC etl.sp_run_pipeline;"
+              xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+          </DTS:ObjectData>
+        </DTS:Executable>
+        <DTS:Executable
+          DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH"
+          DTS:CreationName="STOCK:SEQUENCE"
+          DTS:Description="Conteneur de séquences"
+          DTS:DTSID="{66B99983-FC62-5046-8FEC-A228B7ACF741}"
+          DTS:ExecutableType="STOCK:SEQUENCE"
+          DTS:LocaleID="-1"
+          DTS:ObjectName="SEQ_Push_DWH">
+          <DTS:Variables />
+          <DTS:Executables>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\Truncate_DimDate_DWH"
+            DTS:CreationName="Microsoft.ExecuteSQLTask"
+            DTS:Description="Vide la table DWH avant DFT_DWH_DimDate"
+            DTS:DTSID="{473554E4-F323-5984-985F-C6BC78B5BF20}"
+            DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="Truncate_DimDate_DWH"
+            DTS:TaskContact="Execute SQL Task; Microsoft Corporation; SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1"
+            DTS:ThreadHint="1">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <SQLTask:SqlTaskData
+              SQLTask:SqlStatementSource="TRUNCATE TABLE dw.dim_date;"
+              xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimDate"
+            DTS:CreationName="Microsoft.Pipeline"
+            DTS:Description="Tâche de flux de données"
+            DTS:DTSID="{8E247874-DD55-5A49-A837-E4E606A8CF8C}"
+            DTS:ExecutableType="Microsoft.Pipeline"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="DFT_DWH_DimDate"
+            DTS:TaskContact="Performs high-performance data extraction, transformation and loading;Microsoft Corporation; Microsoft SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <pipeline
+                version="1" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\Truncate_DimCanal_DWH"
+            DTS:CreationName="Microsoft.ExecuteSQLTask"
+            DTS:Description="Vide la table DWH avant DFT_DWH_DimCanal"
+            DTS:DTSID="{1DAC5C46-AB2B-5B26-9B96-A0004B7081AE}"
+            DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="Truncate_DimCanal_DWH"
+            DTS:TaskContact="Execute SQL Task; Microsoft Corporation; SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1"
+            DTS:ThreadHint="2">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <SQLTask:SqlTaskData
+              SQLTask:SqlStatementSource="TRUNCATE TABLE dw.dim_canal;"
+              xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimCanal"
+            DTS:CreationName="Microsoft.Pipeline"
+            DTS:Description="Tâche de flux de données"
+            DTS:DTSID="{784ECA5C-E3D6-539B-A205-B727DC833F58}"
+            DTS:ExecutableType="Microsoft.Pipeline"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="DFT_DWH_DimCanal"
+            DTS:TaskContact="Performs high-performance data extraction, transformation and loading;Microsoft Corporation; Microsoft SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <pipeline
+                version="1" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\Truncate_DimGeographie_DWH"
+            DTS:CreationName="Microsoft.ExecuteSQLTask"
+            DTS:Description="Vide la table DWH avant DFT_DWH_DimGeographie"
+            DTS:DTSID="{E40C73D1-F34B-5FB4-ADA9-1DD7F8DD632B}"
+            DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="Truncate_DimGeographie_DWH"
+            DTS:TaskContact="Execute SQL Task; Microsoft Corporation; SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1"
+            DTS:ThreadHint="3">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <SQLTask:SqlTaskData
+              SQLTask:SqlStatementSource="TRUNCATE TABLE dw.dim_geographie;"
+              xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimGeographie"
+            DTS:CreationName="Microsoft.Pipeline"
+            DTS:Description="Tâche de flux de données"
+            DTS:DTSID="{45D03339-14CD-57AD-A39D-69319E1531D7}"
+            DTS:ExecutableType="Microsoft.Pipeline"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="DFT_DWH_DimGeographie"
+            DTS:TaskContact="Performs high-performance data extraction, transformation and loading;Microsoft Corporation; Microsoft SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <pipeline
+                version="1" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\Truncate_DimFournisseur_DWH"
+            DTS:CreationName="Microsoft.ExecuteSQLTask"
+            DTS:Description="Vide la table DWH avant DFT_DWH_DimFournisseur"
+            DTS:DTSID="{290590E1-A2CA-5F78-8234-EC4010E60458}"
+            DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="Truncate_DimFournisseur_DWH"
+            DTS:TaskContact="Execute SQL Task; Microsoft Corporation; SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1"
+            DTS:ThreadHint="4">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <SQLTask:SqlTaskData
+              SQLTask:SqlStatementSource="TRUNCATE TABLE dw.dim_fournisseur;"
+              xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimFournisseur"
+            DTS:CreationName="Microsoft.Pipeline"
+            DTS:Description="Tâche de flux de données"
+            DTS:DTSID="{2798E2EF-AB91-5044-83D5-E14A71BE2E82}"
+            DTS:ExecutableType="Microsoft.Pipeline"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="DFT_DWH_DimFournisseur"
+            DTS:TaskContact="Performs high-performance data extraction, transformation and loading;Microsoft Corporation; Microsoft SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <pipeline
+                version="1" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\Truncate_DimProduit_DWH"
+            DTS:CreationName="Microsoft.ExecuteSQLTask"
+            DTS:Description="Vide la table DWH avant DFT_DWH_DimProduit"
+            DTS:DTSID="{14FDED33-521D-516F-9520-409E5B84F65C}"
+            DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="Truncate_DimProduit_DWH"
+            DTS:TaskContact="Execute SQL Task; Microsoft Corporation; SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1"
+            DTS:ThreadHint="5">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <SQLTask:SqlTaskData
+              SQLTask:SqlStatementSource="TRUNCATE TABLE dw.dim_produit;"
+              xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimProduit"
+            DTS:CreationName="Microsoft.Pipeline"
+            DTS:Description="Tâche de flux de données"
+            DTS:DTSID="{C40A0BA3-6A1B-5E39-B952-F260F41BBA55}"
+            DTS:ExecutableType="Microsoft.Pipeline"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="DFT_DWH_DimProduit"
+            DTS:TaskContact="Performs high-performance data extraction, transformation and loading;Microsoft Corporation; Microsoft SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <pipeline
+                version="1" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\Truncate_DimClient_DWH"
+            DTS:CreationName="Microsoft.ExecuteSQLTask"
+            DTS:Description="Vide la table DWH avant DFT_DWH_DimClient"
+            DTS:DTSID="{88D2D05C-8187-53AA-B777-E9781730AEDA}"
+            DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="Truncate_DimClient_DWH"
+            DTS:TaskContact="Execute SQL Task; Microsoft Corporation; SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1"
+            DTS:ThreadHint="6">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <SQLTask:SqlTaskData
+              SQLTask:SqlStatementSource="TRUNCATE TABLE dw.dim_client;"
+              xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimClient"
+            DTS:CreationName="Microsoft.Pipeline"
+            DTS:Description="Tâche de flux de données"
+            DTS:DTSID="{2934D6C1-06AF-5EB3-AD15-ACFAAA295BC8}"
+            DTS:ExecutableType="Microsoft.Pipeline"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="DFT_DWH_DimClient"
+            DTS:TaskContact="Performs high-performance data extraction, transformation and loading;Microsoft Corporation; Microsoft SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <pipeline
+                version="1" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\Truncate_DimEmploye_DWH"
+            DTS:CreationName="Microsoft.ExecuteSQLTask"
+            DTS:Description="Vide la table DWH avant DFT_DWH_DimEmploye"
+            DTS:DTSID="{C059B2A2-411D-5106-9E0F-8F06268B541A}"
+            DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="Truncate_DimEmploye_DWH"
+            DTS:TaskContact="Execute SQL Task; Microsoft Corporation; SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1"
+            DTS:ThreadHint="7">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <SQLTask:SqlTaskData
+              SQLTask:SqlStatementSource="TRUNCATE TABLE dw.dim_employe;"
+              xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimEmploye"
+            DTS:CreationName="Microsoft.Pipeline"
+            DTS:Description="Tâche de flux de données"
+            DTS:DTSID="{7829609D-7673-55E4-A409-DEFD4EEB11AB}"
+            DTS:ExecutableType="Microsoft.Pipeline"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="DFT_DWH_DimEmploye"
+            DTS:TaskContact="Performs high-performance data extraction, transformation and loading;Microsoft Corporation; Microsoft SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <pipeline
+                version="1" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\Truncate_FaitVentes_DWH"
+            DTS:CreationName="Microsoft.ExecuteSQLTask"
+            DTS:Description="Vide la table DWH avant DFT_DWH_FaitVentes"
+            DTS:DTSID="{367F9F5F-8CD3-57CC-B958-E06082258B81}"
+            DTS:ExecutableType="Microsoft.ExecuteSQLTask"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="Truncate_FaitVentes_DWH"
+            DTS:TaskContact="Execute SQL Task; Microsoft Corporation; SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1"
+            DTS:ThreadHint="8">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <SQLTask:SqlTaskData
+              SQLTask:SqlStatementSource="TRUNCATE TABLE dw.fait_ventes;"
+              xmlns:SQLTask="www.microsoft.com/sqlserver/dts/tasks/sqltask" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          <DTS:Executable
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_FaitVentes"
+            DTS:CreationName="Microsoft.Pipeline"
+            DTS:Description="Tâche de flux de données"
+            DTS:DTSID="{59451F7E-EB48-5A0A-812A-89EDD9C99A06}"
+            DTS:ExecutableType="Microsoft.Pipeline"
+            DTS:LocaleID="-1"
+            DTS:ObjectName="DFT_DWH_FaitVentes"
+            DTS:TaskContact="Performs high-performance data extraction, transformation and loading;Microsoft Corporation; Microsoft SQL Server; (C) Microsoft Corporation; All Rights Reserved;http://www.microsoft.com/sql/support/default.asp;1">
+            <DTS:Variables />
+            <DTS:ObjectData>
+              <pipeline
+                version="1" />
+            </DTS:ObjectData>
+          </DTS:Executable>
+          </DTS:Executables>
+          <DTS:PrecedenceConstraints>
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH.PrecedenceConstraints[PC_Truncate_DimDate_DWH]"
+            DTS:CreationName=""
+            DTS:DTSID="{7D60CF36-8C8E-58B3-8346-6A246C941068}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\Truncate_DimDate_DWH"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_Truncate_DimDate_DWH"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimDate"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH.PrecedenceConstraints[PC_Truncate_DimCanal_DWH]"
+            DTS:CreationName=""
+            DTS:DTSID="{ACBB84B0-1CC3-5824-95D9-4A23C6E47C7B}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\Truncate_DimCanal_DWH"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_Truncate_DimCanal_DWH"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimCanal"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH.PrecedenceConstraints[PC_Truncate_DimGeographie_DWH]"
+            DTS:CreationName=""
+            DTS:DTSID="{734801B9-6EFD-5E7B-8BB7-37A1176F88FE}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\Truncate_DimGeographie_DWH"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_Truncate_DimGeographie_DWH"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimGeographie"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH.PrecedenceConstraints[PC_Truncate_DimFournisseur_DWH]"
+            DTS:CreationName=""
+            DTS:DTSID="{763F3C84-33B8-51A9-8BC4-CD9E8DE1BB47}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\Truncate_DimFournisseur_DWH"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_Truncate_DimFournisseur_DWH"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimFournisseur"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH.PrecedenceConstraints[PC_Truncate_DimProduit_DWH]"
+            DTS:CreationName=""
+            DTS:DTSID="{A326F8D6-443D-50A7-82B1-FB4CD4A47E03}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\Truncate_DimProduit_DWH"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_Truncate_DimProduit_DWH"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimProduit"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH.PrecedenceConstraints[PC_Truncate_DimClient_DWH]"
+            DTS:CreationName=""
+            DTS:DTSID="{B9C42F49-D24B-5B29-91DD-842CB6D90F8D}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\Truncate_DimClient_DWH"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_Truncate_DimClient_DWH"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimClient"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH.PrecedenceConstraints[PC_Truncate_DimEmploye_DWH]"
+            DTS:CreationName=""
+            DTS:DTSID="{3BDB450E-7DCB-5306-9590-DE727A05BDD6}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\Truncate_DimEmploye_DWH"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_Truncate_DimEmploye_DWH"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimEmploye"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH.PrecedenceConstraints[PC_Truncate_FaitVentes_DWH]"
+            DTS:CreationName=""
+            DTS:DTSID="{48E48558-DA94-507E-9BA7-8ADA2CE6EDDE}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\Truncate_FaitVentes_DWH"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_Truncate_FaitVentes_DWH"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_FaitVentes"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH.PrecedenceConstraints[PC_DFT_DWH_DimDate_to_DFT_DWH_FaitVentes]"
+            DTS:CreationName=""
+            DTS:DTSID="{FF587090-DCE5-52A9-8E20-7087145C51CE}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimDate"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_DFT_DWH_DimDate_to_DFT_DWH_FaitVentes"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_FaitVentes"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH.PrecedenceConstraints[PC_DFT_DWH_DimCanal_to_DFT_DWH_FaitVentes]"
+            DTS:CreationName=""
+            DTS:DTSID="{42F478E0-146A-5625-9C9C-84E31F283202}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimCanal"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_DFT_DWH_DimCanal_to_DFT_DWH_FaitVentes"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_FaitVentes"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH.PrecedenceConstraints[PC_DFT_DWH_DimGeographie_to_DFT_DWH_FaitVentes]"
+            DTS:CreationName=""
+            DTS:DTSID="{73A12D6D-F035-5F9E-A0C0-65FE71D9528A}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimGeographie"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_DFT_DWH_DimGeographie_to_DFT_DWH_FaitVentes"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_FaitVentes"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH.PrecedenceConstraints[PC_DFT_DWH_DimFournisseur_to_DFT_DWH_FaitVentes]"
+            DTS:CreationName=""
+            DTS:DTSID="{E96659A3-A3CC-599E-838C-9D74FB0F09BA}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimFournisseur"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_DFT_DWH_DimFournisseur_to_DFT_DWH_FaitVentes"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_FaitVentes"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH.PrecedenceConstraints[PC_DFT_DWH_DimProduit_to_DFT_DWH_FaitVentes]"
+            DTS:CreationName=""
+            DTS:DTSID="{57D53EF6-C0C1-56A8-8E07-700C91D0C3EA}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimProduit"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_DFT_DWH_DimProduit_to_DFT_DWH_FaitVentes"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_FaitVentes"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH.PrecedenceConstraints[PC_DFT_DWH_DimClient_to_DFT_DWH_FaitVentes]"
+            DTS:CreationName=""
+            DTS:DTSID="{DEC5688D-C7E2-5FF5-BD46-C5FE5E47CDC1}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimClient"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_DFT_DWH_DimClient_to_DFT_DWH_FaitVentes"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_FaitVentes"
+            DTS:Value="0" />
+          <DTS:PrecedenceConstraint
+            DTS:refId="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH.PrecedenceConstraints[PC_DFT_DWH_DimEmploye_to_DFT_DWH_FaitVentes]"
+            DTS:CreationName=""
+            DTS:DTSID="{F9E15F50-A4E8-5CB8-BA3A-E33FB75F95C5}"
+            DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_DimEmploye"
+            DTS:LogicalAnd="True"
+            DTS:ObjectName="PC_DFT_DWH_DimEmploye_to_DFT_DWH_FaitVentes"
+            DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH\DFT_DWH_FaitVentes"
+            DTS:Value="0" />
+          </DTS:PrecedenceConstraints>
+        </DTS:Executable>
+        </DTS:Executables>
+        <DTS:PrecedenceConstraints>
+        <DTS:PrecedenceConstraint
+          DTS:refId="Package\SEQ_Pipeline_Complet.PrecedenceConstraints[PC_Lire_to_Chargement]"
+          DTS:CreationName=""
+          DTS:DTSID="{6D0434A7-E7AD-50DB-BA46-41829645319A}"
+          DTS:From="Package\SEQ_Pipeline_Complet\SQL_Lire_Watermark"
+          DTS:LogicalAnd="True"
+          DTS:ObjectName="PC_Lire_to_Chargement"
+          DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging"
+          DTS:Value="0" />
+        <DTS:PrecedenceConstraint
+          DTS:refId="Package\SEQ_Pipeline_Complet.PrecedenceConstraints[PC_Chargement_to_Exec]"
+          DTS:CreationName=""
+          DTS:DTSID="{2AAE799F-8A1D-53B9-9A32-18D719491C09}"
+          DTS:From="Package\SEQ_Pipeline_Complet\SEQ_Chargement_Staging"
+          DTS:LogicalAnd="True"
+          DTS:ObjectName="PC_Chargement_to_Exec"
+          DTS:To="Package\SEQ_Pipeline_Complet\SQL_Exec_sp_run_pipeline"
+          DTS:Value="0" />
+        <DTS:PrecedenceConstraint
+          DTS:refId="Package\SEQ_Pipeline_Complet.PrecedenceConstraints[PC_Exec_to_Push]"
+          DTS:CreationName=""
+          DTS:DTSID="{C22EA2A4-758D-5FE8-A7C6-CD7EB319DF1B}"
+          DTS:From="Package\SEQ_Pipeline_Complet\SQL_Exec_sp_run_pipeline"
+          DTS:LogicalAnd="True"
+          DTS:ObjectName="PC_Exec_to_Push"
+          DTS:To="Package\SEQ_Pipeline_Complet\SEQ_Push_DWH"
+          DTS:Value="0" />
+        </DTS:PrecedenceConstraints>
+      </DTS:Executable>
+  </DTS:Executables>
+  <DTS:DesignTimeProperties><![CDATA[<?xml version="1.0"?>
+<!--Cette section CDATA contient des informations sur la disposition du package.-->
+<!--Si vous modifiez manuellement cette section et commettez une erreur, vous pouvez la supprimer.-->
+<!--Le package pourra toujours se charger normalement, mais les informations de disposition precedente seront perdues et le concepteur reorganisera automatiquement les elements sur l'aire de conception.-->
+<Objects Version="8">
+  <Package design-time-name="Package">
+    <LayoutInfo>
+      <GraphLayout Capacity="32" xmlns="clr-namespace:Microsoft.SqlServer.IntegrationServices.Designer.Model.Serialization;assembly=Microsoft.SqlServer.IntegrationServices.Graph" xmlns:mssgle="clr-namespace:Microsoft.SqlServer.Graph.LayoutEngine;assembly=Microsoft.SqlServer.Graph" xmlns:assembly="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib">
+      </GraphLayout>
+    </LayoutInfo>
+  </Package>
+</Objects>]]></DTS:DesignTimeProperties>
+</DTS:Executable>

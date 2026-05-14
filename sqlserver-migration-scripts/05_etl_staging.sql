@@ -13,7 +13,7 @@ CREATE TABLE staging.geographie_full (
     nom_ville       NVARCHAR(100) NOT NULL,
     code_postal     NVARCHAR(20)  NULL,
     nom_region      NVARCHAR(100) NOT NULL,
-    code_pays       NCHAR(2)      NOT NULL,
+    code_pays       NCHAR(2)       NOT NULL,
     nom_pays        NVARCHAR(100) NOT NULL,
     nom_continent   NVARCHAR(50)  NOT NULL
 );

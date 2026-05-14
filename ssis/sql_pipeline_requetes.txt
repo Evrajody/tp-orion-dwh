@@ -1,0 +1,529 @@
+============================================================================
+ORION - SSIS Orion_Pipeline_Quotidien.dtsx - toutes les requetes SQL
+============================================================================
+
+Ce fichier regroupe TOUTES les commandes SQL a coller dans les composants
+SSIS du package Orion_Pipeline_Quotidien.dtsx, dans l'ordre du Control Flow.
+
+Chaque bloc precise OU coller la commande :
+  - SOURCE   = onglet "Editeur de source ODBC" ou "OLE DB" -> Mode d'acces
+               "Commande SQL" -> Texte de commande SQL
+  - TRUNCATE = onglet "Editeur de la tache d'execution SQL" -> SQLStatement
+  - PROCEDURE = idem
+
+Connexions a utiliser cote SSIS :
+  - ORIONOLTP.orion : Source ODBC vers Postgres OLTP distant
+  - ORIONETL.orion  : Source/Destination OLE DB vers OrionETL (localhost)
+  - ORIONDWH.orion  : Destination OLE DB vers OrionDWH (localhost)
+
+
+============================================================================
+SECTION A - TACHES TRANSVERSES (hors Sequence Containers)
+============================================================================
+
+
+-- --------------------------------------------------------------------------
+-- [A.1] SQL_Lire_Watermark
+--   Tache    : Execute SQL Task
+--   Connexion: ORIONETL.orion
+--   ResultSet: Single row -> User::Watermark (ResultName "0" / "ResultName0")
+--   Place    : tout en haut du Control Flow, avant SEQ_Pipeline_Complet
+-- --------------------------------------------------------------------------
+SELECT ISNULL(MAX(last_value), '1900-01-01')
+  FROM etl.watermark
+ WHERE job_name = 'fait_ventes';
+
+
+-- --------------------------------------------------------------------------
+-- [A.2] SQL_Exec_sp_run_pipeline
+--   Tache    : Execute SQL Task
+--   Connexion: ORIONETL.orion
+--   ResultSet: None
+--   Place    : entre SEQ_Chargement_Staging et SEQ_Push_DWH
+-- --------------------------------------------------------------------------
+EXEC etl.sp_run_pipeline;
+
+
+
+============================================================================
+SECTION B - SEQ_Chargement_Staging
+============================================================================
+
+Patron commun : 7 TRUNCATE + 7 Data Flow Tasks
+  - TRUNCATE en tete (Tache d'execution SQL groupant les 7 vidages)
+  - DFT Source ODBC (Postgres) -> Destination OLE DB (OrionETL)
+  - Les 6 dimensions tournent en parallele, Lignes_Commande converge derriere
+
+
+-- --------------------------------------------------------------------------
+-- [B.0] SQL_Truncate_Staging
+--   Tache    : Execute SQL Task
+--   Connexion: ORIONETL.orion
+--   ResultSet: None
+--   Place    : en tete de SEQ_Chargement_Staging, avant tous les DFT
+-- --------------------------------------------------------------------------
+TRUNCATE TABLE staging.geographie_full;
+TRUNCATE TABLE staging.fournisseur_full;
+TRUNCATE TABLE staging.canal;
+TRUNCATE TABLE staging.produit_full;
+TRUNCATE TABLE staging.client_full;
+TRUNCATE TABLE staging.employe_full;
+TRUNCATE TABLE staging.lignes_commande;
+
+
+-- --------------------------------------------------------------------------
+-- [B.1] DFT_Staging_Geographie - Source ODBC
+--   Connexion : ORIONOLTP.orion
+--   Mode      : Commande SQL
+--   Destination OLE DB : ORIONETL.orion -> [staging].[geographie_full]
+--   Volume    : ~quelques milliers de lignes
+-- --------------------------------------------------------------------------
+SELECT v.ville_id,
+       v.nom_ville,
+       v.code_postal,
+       r.nom_region,
+       p.code_pays,
+       p.nom_pays,
+       c.nom_continent
+  FROM ops.ville      v
+  JOIN ops.region     r  ON r.region_id    = v.region_id
+  JOIN ops.pays       p  ON p.pays_id      = r.pays_id
+  JOIN ops.continent  c  ON c.continent_id = p.continent_id;
+
+
+-- --------------------------------------------------------------------------
+-- [B.2] DFT_Staging_Fournisseur - Source ODBC
+--   Connexion : ORIONOLTP.orion
+--   Mode      : Commande SQL
+--   Destination OLE DB : ORIONETL.orion -> [staging].[fournisseur_full]
+--   Volume    : ~quelques centaines
+-- --------------------------------------------------------------------------
+SELECT f.fournisseur_id,
+       f.nom_fournisseur,
+       p.nom_pays,
+       c.nom_continent
+  FROM ops.fournisseur f
+  JOIN ops.pays        p  ON p.pays_id      = f.pays_id
+  JOIN ops.continent   c  ON c.continent_id = p.continent_id;
+
+
+-- --------------------------------------------------------------------------
+-- [B.3] DFT_Staging_Canal - Source ODBC
+--   Connexion : ORIONOLTP.orion
+--   Mode      : Commande SQL
+--   Destination OLE DB : ORIONETL.orion -> [staging].[canal]
+--   Volume    : 4 a 8 lignes (magasin / web / telephone / partenaire...)
+-- --------------------------------------------------------------------------
+SELECT canal_id,
+       code_canal,
+       nom_canal
+  FROM ops.canal_vente;
+
+
+-- --------------------------------------------------------------------------
+-- [B.4] DFT_Staging_Produit - Source ODBC
+--   Connexion : ORIONOLTP.orion
+--   Mode      : Commande SQL
+--   Destination OLE DB : ORIONETL.orion -> [staging].[produit_full]
+--   Volume    : 5 000 a 50 000
+-- --------------------------------------------------------------------------
+SELECT pr.produit_id,
+       pr.nom_produit,
+       g.nom_groupe_produit,
+       cat.nom_categorie_produit,
+       lp.nom_ligne_produit,
+       f.fournisseur_id                  AS fournisseur_id_naturel,
+       f.nom_fournisseur,
+       pr.actif
+  FROM ops.produit            pr
+  JOIN ops.groupe_produit     g    ON g.groupe_produit_id     = pr.groupe_produit_id
+  JOIN ops.categorie_produit  cat  ON cat.categorie_produit_id = g.categorie_produit_id
+  JOIN ops.ligne_produit      lp   ON lp.ligne_produit_id     = cat.ligne_produit_id
+  JOIN ops.fournisseur        f    ON f.fournisseur_id        = pr.fournisseur_id;
+
+
+-- --------------------------------------------------------------------------
+-- [B.5] DFT_Staging_Client - Source ODBC
+--   Connexion : ORIONOLTP.orion
+--   Mode      : Commande SQL
+--   Destination OLE DB : ORIONETL.orion -> [staging].[client_full]
+--   Volume    : 50 000 a 200 000
+--   Remarque  : LEFT JOIN sur carte_fidelite (un client n'en a pas
+--               forcement). a_carte_fidelite = expression booleenne.
+-- --------------------------------------------------------------------------
+-- CAST explicite des concatenations en VARCHAR(n) borne : evite que psqlODBC
+-- les remonte en TEXT/LongVarChar et force SSIS en row-by-row fetch.
+-- LEFT(..., 160) garantit que la longueur reste <= 160 pour matcher
+-- staging.client_full.nom_complet NVARCHAR(160) (pas de warning truncation).
+SELECT c.client_id,
+       LEFT(c.nom || ' ' || c.prenom, 160)::VARCHAR(160)  AS nom_complet,
+       c.sexe,
+       c.date_naissance,
+       gc.nom_groupe_client                       AS groupe_client,
+       (cf.carte_fidelite_id IS NOT NULL)         AS a_carte_fidelite,
+       v.nom_ville,
+       p.nom_pays,
+       cont.nom_continent,
+       c.maj_le
+  FROM ops.client           c
+  LEFT JOIN ops.groupe_client   gc  ON gc.groupe_client_id  = c.groupe_client_id
+  LEFT JOIN ops.carte_fidelite  cf  ON cf.client_id         = c.client_id
+  JOIN ops.ville            v     ON v.ville_id        = c.ville_id
+  JOIN ops.region           r     ON r.region_id       = v.region_id
+  JOIN ops.pays             p     ON p.pays_id         = r.pays_id
+  JOIN ops.continent        cont  ON cont.continent_id = p.continent_id;
+
+
+-- --------------------------------------------------------------------------
+-- [B.6] DFT_Staging_Employe - Source ODBC
+--   Connexion : ORIONOLTP.orion
+--   Mode      : Commande SQL
+--   Destination OLE DB : ORIONETL.orion -> [staging].[employe_full]
+--   Volume    : 1 000 a 20 000
+--   Remarque  : LATERAL pour recuperer le contrat courant (1 ligne par
+--               employe : contrat ouvert si dispo, sinon le plus recent).
+-- --------------------------------------------------------------------------
+-- CAST explicite : concatenations -> VARCHAR(160), CASE -> VARCHAR(20),
+-- COUNT(*) -> INTEGER. Tout est borne, plus aucune colonne classee LOB.
+-- LEFT(..., 160) borne a la longueur de staging.employe_full.nom_complet
+-- (pas de warning truncation cote SSIS).
+SELECT e.employe_id,
+       LEFT(e.nom || ' ' || e.prenom, 160)::VARCHAR(160)  AS nom_complet,
+       e.sexe,
+       e.date_naissance,
+       e.salaire,
+       op.nom_org_pays                            AS org_pays,
+       oc.nom_org_compagnie                       AS org_compagnie,
+       od.nom_org_departement                     AS org_departement,
+       os.nom_org_section                         AS org_section,
+       og.nom_org_groupe                          AS org_groupe,
+       LEFT(m.nom || ' ' || m.prenom, 160)::VARCHAR(160) AS nom_manager,
+       e.date_embauche,
+       e.date_depart,
+       cc.type_contrat                            AS type_contrat_courant,
+       cc.date_debut                              AS date_debut_contrat,
+       cc.date_fin                                AS date_fin_contrat,
+       (CASE
+         WHEN cc.contrat_id IS NULL          THEN 'SansContrat'
+         WHEN cc.date_fin   IS NULL          THEN 'Actif'
+         WHEN cc.date_fin   >= CURRENT_DATE  THEN 'Actif'
+         ELSE                                     'Expire'
+       END)::VARCHAR(20)                          AS statut_contrat,
+       (SELECT COUNT(*) FROM ops.contrat_employe ce
+         WHERE ce.employe_id = e.employe_id)::INTEGER  AS nb_contrats_signes,
+       e.maj_le
+  FROM ops.employe          e
+  JOIN ops.org_groupe       og  ON og.org_groupe_id      = e.org_groupe_id
+  JOIN ops.org_section      os  ON os.org_section_id     = og.org_section_id
+  JOIN ops.org_departement  od  ON od.org_departement_id = os.org_departement_id
+  JOIN ops.org_compagnie    oc  ON oc.org_compagnie_id   = od.org_compagnie_id
+  JOIN ops.org_pays         op  ON op.org_pays_id        = oc.org_pays_id
+  LEFT JOIN ops.employe     m   ON m.employe_id          = e.manager_id
+  LEFT JOIN LATERAL (
+        SELECT contrat_id, type_contrat, date_debut, date_fin
+          FROM ops.contrat_employe ce
+         WHERE ce.employe_id = e.employe_id
+         ORDER BY (date_fin IS NULL) DESC, date_debut DESC
+         LIMIT 1
+  ) cc ON TRUE;
+
+
+-- --------------------------------------------------------------------------
+-- [B.7] DFT_Staging_Lignes_Commande - Source ODBC (PARAMETREE)
+--   Connexion : ORIONOLTP.orion
+--   Mode      : Commande SQL
+--   Destination OLE DB : ORIONETL.orion -> [staging].[lignes_commande]
+--   Volume    : 100 000 a 2,5 M de lignes
+--   ATTENTION : c'est le SEUL DFT incremental. Le "?" est un placeholder
+--               ODBC positionnel a lier dans l'onglet "Parametres..." :
+--                 Parameter0 -> Variable User::Watermark (Input)
+-- --------------------------------------------------------------------------
+SELECT o.commande_id,
+       l.numero_ligne,
+       o.date_commande,
+       o.client_id,
+       o.employe_id,
+       o.canal_id,
+       l.produit_id,
+       p.fournisseur_id,
+       c.ville_id     AS cli_ville_id,
+       l.quantite,
+       l.prix_unitaire,
+       l.cout_unitaire,
+       l.pct_remise
+  FROM ops.commande        o
+  JOIN ops.ligne_commande  l  ON l.commande_id = o.commande_id
+  JOIN ops.produit         p  ON p.produit_id  = l.produit_id
+  JOIN ops.client          c  ON c.client_id   = o.client_id
+ WHERE o.date_commande > ?;
+
+
+
+============================================================================
+SECTION C - SEQ_Push_DWH
+============================================================================
+
+Patron commun : 1 TRUNCATE global + 8 Data Flow Tasks
+  - TRUNCATE en tete (Tache d'execution SQL groupant les 8 vidages dans
+    l'ordre fait -> dim a cause des FK)
+  - DFT Source OLE DB (OrionETL.dim.*) -> Destination OLE DB (OrionDWH.dw.*)
+  - Les 7 dimensions tournent en parallele, FaitVentes converge derriere
+  - Sur la Destination : laisser "Ignorer" pour les colonnes IDENTITY
+    (cle_canal, cle_geographie, cle_fournisseur, cle_produit, cle_client,
+     cle_employe, fait_id) ; cle_date est conservee (cle naturelle AAAAMMJJ)
+
+
+-- --------------------------------------------------------------------------
+-- [C.0] SQL_Truncate_DWH
+--   Tache    : Execute SQL Task
+--   Connexion: ORIONDWH.orion
+--   ResultSet: None
+--   Place    : en tete de SEQ_Push_DWH, avant tous les DFT
+--   Ordre    : fact AVANT dim (contraintes de cle etrangere)
+-- --------------------------------------------------------------------------
+TRUNCATE TABLE dw.fait_ventes;
+TRUNCATE TABLE dw.dim_client;
+TRUNCATE TABLE dw.dim_employe;
+TRUNCATE TABLE dw.dim_produit;
+TRUNCATE TABLE dw.dim_fournisseur;
+TRUNCATE TABLE dw.dim_geographie;
+TRUNCATE TABLE dw.dim_canal;
+TRUNCATE TABLE dw.dim_date;
+
+
+-- --------------------------------------------------------------------------
+-- [C.1] DFT_DWH_DimDate - Source OLE DB
+--   Connexion source     : ORIONETL.orion
+--   Mode                 : Commande SQL
+--   Destination          : ORIONDWH.orion -> [dw].[dim_date]
+--   Cle conservee        : cle_date (AAAAMMJJ, non-IDENTITY)
+--   Volume               : ~3650 (10 ans)
+-- --------------------------------------------------------------------------
+SELECT cle_date,
+       date_complete,
+       jour_du_mois,
+       numero_mois,
+       nom_mois,
+       numero_trimestre,
+       annee,
+       jour_de_semaine,
+       nom_jour,
+       semaine_annee,
+       est_weekend,
+       saison
+  FROM dim.dim_date;
+
+
+-- --------------------------------------------------------------------------
+-- [C.2] DFT_DWH_DimCanal - Source OLE DB
+--   Connexion source : ORIONETL.orion
+--   Mode             : Commande SQL
+--   Destination      : ORIONDWH.orion -> [dw].[dim_canal]
+--   IDENTITY ignoree : cle_canal
+--   Volume           : 4 a 8
+-- --------------------------------------------------------------------------
+SELECT canal_id,
+       code_canal,
+       nom_canal
+  FROM dim.dim_canal;
+
+
+-- --------------------------------------------------------------------------
+-- [C.3] DFT_DWH_DimGeographie - Source OLE DB
+--   Connexion source : ORIONETL.orion
+--   Mode             : Commande SQL
+--   Destination      : ORIONDWH.orion -> [dw].[dim_geographie]
+--   IDENTITY ignoree : cle_geographie
+--   Volume           : ~quelques milliers
+-- --------------------------------------------------------------------------
+SELECT ville_id,
+       nom_ville,
+       nom_region,
+       code_pays,
+       nom_pays,
+       nom_continent,
+       code_postal
+  FROM dim.dim_geographie;
+
+
+-- --------------------------------------------------------------------------
+-- [C.4] DFT_DWH_DimFournisseur - Source OLE DB
+--   Connexion source : ORIONETL.orion
+--   Mode             : Commande SQL
+--   Destination      : ORIONDWH.orion -> [dw].[dim_fournisseur]
+--   IDENTITY ignoree : cle_fournisseur
+--   Volume           : ~quelques centaines
+-- --------------------------------------------------------------------------
+SELECT fournisseur_id,
+       nom_fournisseur,
+       nom_pays,
+       nom_continent
+  FROM dim.dim_fournisseur;
+
+
+-- --------------------------------------------------------------------------
+-- [C.5] DFT_DWH_DimProduit - Source OLE DB
+--   Connexion source : ORIONETL.orion
+--   Mode             : Commande SQL
+--   Destination      : ORIONDWH.orion -> [dw].[dim_produit]
+--   IDENTITY ignoree : cle_produit
+--   Volume           : 5 000 a 50 000
+-- --------------------------------------------------------------------------
+SELECT produit_id,
+       nom_produit,
+       nom_groupe_produit,
+       nom_categorie_produit,
+       nom_ligne_produit,
+       fournisseur_id_naturel,
+       nom_fournisseur,
+       actif,
+       maj_le
+  FROM dim.dim_produit;
+
+
+-- --------------------------------------------------------------------------
+-- [C.6] DFT_DWH_DimClient - Source OLE DB (SCD2)
+--   Connexion source : ORIONETL.orion
+--   Mode             : Commande SQL
+--   Destination      : ORIONDWH.orion -> [dw].[dim_client]
+--   IDENTITY ignoree : cle_client
+--   Remarque         : on copie TOUTES les versions (courantes + historiques)
+--                      car etl.sp_load_dim_client cree plusieurs lignes par
+--                      client_id (clos anciennes + ouvre nouvelles).
+-- --------------------------------------------------------------------------
+SELECT client_id,
+       nom_complet,
+       sexe,
+       tranche_age,
+       groupe_client,
+       a_carte_fidelite,
+       nom_ville,
+       nom_pays,
+       nom_continent,
+       effectif_du,
+       effectif_au,
+       est_courant,
+       hash_ligne
+  FROM dim.dim_client;
+
+
+-- --------------------------------------------------------------------------
+-- [C.7] DFT_DWH_DimEmploye - Source OLE DB (SCD2 + contrat)
+--   Connexion source : ORIONETL.orion
+--   Mode             : Commande SQL
+--   Destination      : ORIONDWH.orion -> [dw].[dim_employe]
+--   IDENTITY ignoree : cle_employe
+--   Remarque         : 23 colonnes dont 5 attributs contrat
+--                      (type_contrat_courant, date_debut_contrat,
+--                       date_fin_contrat, statut_contrat, nb_contrats_signes)
+-- --------------------------------------------------------------------------
+SELECT employe_id,
+       nom_complet,
+       sexe,
+       tranche_age,
+       salaire,
+       tranche_salaire,
+       org_pays,
+       org_compagnie,
+       org_departement,
+       org_section,
+       org_groupe,
+       nom_manager,
+       date_embauche,
+       date_depart,
+       type_contrat_courant,
+       date_debut_contrat,
+       date_fin_contrat,
+       statut_contrat,
+       nb_contrats_signes,
+       effectif_du,
+       effectif_au,
+       est_courant,
+       hash_ligne
+  FROM dim.dim_employe;
+
+
+-- --------------------------------------------------------------------------
+-- [C.8] DFT_DWH_FaitVentes - Source OLE DB
+--   Connexion source : ORIONETL.orion
+--   Mode             : Commande SQL
+--   Destination      : ORIONDWH.orion -> [dw].[fait_ventes]
+--   IDENTITY ignoree : fait_id
+--   Place            : DERNIER DFT du SEQ_Push_DWH (precedence Logical AND
+--                      depuis les 7 DFT dim, sinon violation FK)
+--   Volume           : 100 000 a 2,5 M
+--   Perf             : Destination OLE DB -> proprietes avancees :
+--                        Rows per batch = 10000
+--                        Maximum insert commit size = 0
+-- --------------------------------------------------------------------------
+SELECT cle_date,
+       cle_produit,
+       cle_client,
+       cle_employe,
+       cle_fournisseur,
+       cle_canal,
+       cle_geographie_client,
+       commande_id,
+       numero_ligne,
+       quantite,
+       prix_unitaire,
+       cout_unitaire,
+       pct_remise,
+       montant_brut,
+       montant_remise,
+       montant_net,
+       montant_cout,
+       montant_marge
+  FROM fact.fait_ventes;
+
+
+
+============================================================================
+RECAPITULATIF DES PRECEDENCES (a configurer dans le Control Flow SSDT)
+============================================================================
+
+Niveau Package :
+    SQL_Lire_Watermark -> SEQ_Pipeline_Complet (Success)
+
+Niveau SEQ_Pipeline_Complet :
+    SEQ_Chargement_Staging   -> SQL_Exec_sp_run_pipeline (Success)
+    SQL_Exec_sp_run_pipeline -> SEQ_Push_DWH             (Success)
+
+Niveau SEQ_Chargement_Staging :
+    SQL_Truncate_Staging -> DFT_Staging_Geographie     (Success)
+    SQL_Truncate_Staging -> DFT_Staging_Fournisseur    (Success)
+    SQL_Truncate_Staging -> DFT_Staging_Canal          (Success)
+    SQL_Truncate_Staging -> DFT_Staging_Produit        (Success)
+    SQL_Truncate_Staging -> DFT_Staging_Client         (Success)
+    SQL_Truncate_Staging -> DFT_Staging_Employe        (Success)
+    DFT_Staging_Geographie  -> DFT_Staging_Lignes_Commande (Success, AND)
+    DFT_Staging_Fournisseur -> DFT_Staging_Lignes_Commande (Success, AND)
+    DFT_Staging_Canal       -> DFT_Staging_Lignes_Commande (Success, AND)
+    DFT_Staging_Produit     -> DFT_Staging_Lignes_Commande (Success, AND)
+    DFT_Staging_Client      -> DFT_Staging_Lignes_Commande (Success, AND)
+    DFT_Staging_Employe     -> DFT_Staging_Lignes_Commande (Success, AND)
+
+Niveau SEQ_Push_DWH :
+    SQL_Truncate_DWH -> DFT_DWH_DimDate         (Success)
+    SQL_Truncate_DWH -> DFT_DWH_DimCanal        (Success)
+    SQL_Truncate_DWH -> DFT_DWH_DimGeographie   (Success)
+    SQL_Truncate_DWH -> DFT_DWH_DimFournisseur  (Success)
+    SQL_Truncate_DWH -> DFT_DWH_DimProduit      (Success)
+    SQL_Truncate_DWH -> DFT_DWH_DimClient       (Success)
+    SQL_Truncate_DWH -> DFT_DWH_DimEmploye      (Success)
+    DFT_DWH_DimDate         -> DFT_DWH_FaitVentes (Success, AND)
+    DFT_DWH_DimCanal        -> DFT_DWH_FaitVentes (Success, AND)
+    DFT_DWH_DimGeographie   -> DFT_DWH_FaitVentes (Success, AND)
+    DFT_DWH_DimFournisseur  -> DFT_DWH_FaitVentes (Success, AND)
+    DFT_DWH_DimProduit      -> DFT_DWH_FaitVentes (Success, AND)
+    DFT_DWH_DimClient       -> DFT_DWH_FaitVentes (Success, AND)
+    DFT_DWH_DimEmploye      -> DFT_DWH_FaitVentes (Success, AND)
+
+"Logical AND" : double-cliquer la fleche entrante -> "Operation de plusieurs
+contraintes" = "ET logique". Fleche pointillee -> fleche solide.
+
+
+============================================================================
+FIN. Pour les details (volumes, points de vigilance, types ODBC etc.) :
+voir doc/rapport/migration-windows-sqlserver.pdf, etapes 11 a 28.
+============================================================================

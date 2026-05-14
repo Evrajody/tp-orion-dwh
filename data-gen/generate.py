@@ -272,6 +272,69 @@ def gen_employes(cur, ville_ids: list[int]) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Contrats employés
+# ---------------------------------------------------------------------------
+def gen_contrats(cur) -> None:
+    """
+    Patterns réalistes : 60% CDI direct, 25% CDD->CDI, 10% multi-CDD,
+    5% stage / alternance / intérim. Les dates de contrat couvrent au
+    moins l'intervalle [date_embauche, date_depart ou aujourd'hui].
+    """
+    cur.execute("SELECT employe_id, date_embauche, date_depart FROM ops.employe")
+    employes = cur.fetchall()
+    print(f"[contrats] génération pour {len(employes)} employés …")
+
+    rows: list[tuple] = []
+    for eid, d_embauche, d_depart in employes:
+        d_fin_emploi = d_depart or DATE_FIN
+        roll = random.random()
+
+        if roll < 0.60:
+            # 60 % : CDI unique, ouvert (date_fin = NULL si encore en poste)
+            rows.append((eid, d_embauche, d_depart, "CDI"))
+
+        elif roll < 0.85:
+            # 25 % : 1 ou 2 CDD puis CDI
+            cursor_d = d_embauche
+            n_cdd = random.choice([1, 2])
+            for _ in range(n_cdd):
+                end = cursor_d + timedelta(days=random.randint(180, 540))
+                if end >= d_fin_emploi:
+                    end = d_fin_emploi
+                rows.append((eid, cursor_d, end, "CDD"))
+                cursor_d = end + timedelta(days=1)
+                if cursor_d >= d_fin_emploi:
+                    break
+            if cursor_d < d_fin_emploi:
+                rows.append((eid, cursor_d, d_depart, "CDI"))
+
+        elif roll < 0.95:
+            # 10 % : enchaînement de CDD sans CDI final
+            cursor_d = d_embauche
+            while cursor_d < d_fin_emploi:
+                end = cursor_d + timedelta(days=random.randint(120, 365))
+                if end >= d_fin_emploi:
+                    end = d_fin_emploi
+                rows.append((eid, cursor_d, end, "CDD"))
+                cursor_d = end + timedelta(days=1)
+
+        else:
+            # 5 % : un seul contrat alternatif
+            type_alt = random.choice(["Stage", "Alternance", "Interim", "Freelance"])
+            end = d_embauche + timedelta(days=random.randint(120, 720))
+            if end > d_fin_emploi:
+                end = d_fin_emploi
+            rows.append((eid, d_embauche, end, type_alt))
+
+    copy_rows(
+        cur, "ops.contrat_employe",
+        ["employe_id", "date_debut", "date_fin", "type_contrat"],
+        rows,
+    )
+    print(f"[contrats] {len(rows)} contrats générés.")
+
+
+# ---------------------------------------------------------------------------
 # Clients + cartes de fidélité
 # ---------------------------------------------------------------------------
 def gen_clients(cur, ville_ids: list[int]) -> None:
@@ -456,6 +519,8 @@ def main() -> None:
             _, cache_prix, cache_remise = gen_produits(cur)
             print("[seed] employés …")
             gen_employes(cur, ville_ids)
+            print("[seed] contrats employés …")
+            gen_contrats(cur)
             print("[seed] clients + cartes fidélité …")
             gen_clients(cur, ville_ids)
             conn.commit()
